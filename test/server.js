@@ -33,6 +33,24 @@ var testConversation = {
 };
 var testToken = "123123";
 var testExpiredToken = "987978";
+var testMessage = {
+    _id: "507f1f77bcf86cd799439011",
+    senderID: "bob",
+    conversationID: "bob,charlie",
+    contents: "here come dat boi!",
+    timestamp: new Date(2016, 8, 24, 14, 5, 2)
+};
+var testMessage2 = {
+    _id: "507f191e810c19729de860ea",
+    senderID: "charlie",
+    conversationID: "bob,charlie",
+    contents: "waddup!",
+    timestamp: new Date(2016, 8, 24, 14, 5, 2)
+};
+var testMessageContents = "here come dat boi!";
+var testMessageContents2 = "waddup!";
+var testObjectID = "507f1f77bcf86cd799439011";
+var testObjectID2 = "507f191e810c19729de860ea";
 
 describe("server", function() {
     var cookieJar;
