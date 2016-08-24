@@ -588,8 +588,8 @@ describe("server", function() {
             });
         });
     });
-    describe("PUT /api/messages/:id", function() {
-        var requestUrl = baseUrl + "/api/messages/" + testConversation._id;
+    describe("POST /api/messages", function() {
+        var requestUrl = baseUrl + "/api/messages";
         beforeEach(function() {
             // Proxy function that calls a stub with the original argument given to it, adding an _id: <ObjectID>
             // field in the same way as the actual database
@@ -606,12 +606,13 @@ describe("server", function() {
             dbCollections.messages.insertOne.stub = sinon.stub();
         });
         it("responds with status code 401 if user not authenticated", function(done) {
-            request.put({
+            request.post({
                 url: requestUrl,
                 headers: {
                     "Content-type": "application/json"
                 },
                 body: JSON.stringify({
+                    conversationID: testConversation._id,
                     contents: testMessageContents
                 })
             }, function(error, response) {
@@ -621,12 +622,13 @@ describe("server", function() {
         });
         it("responds with status code 401 if user has an unrecognised session token", function(done) {
             cookieJar.setCookie(request.cookie("sessionToken=" + testExpiredToken), baseUrl);
-            request.put({
+            request.post({
                 url: requestUrl,
                 headers: {
                     "Content-type": "application/json"
                 },
                 body: JSON.stringify({
+                    conversationID: testConversation._id,
                     contents: testMessageContents
                 }),
                 jar: cookieJar
@@ -641,12 +643,13 @@ describe("server", function() {
                     dbCollections.conversations.findOne.callsArgWith(1, null, testConversation);
                     dbCollections.messages.insertOne.stub.callsArgWith(1, null, true);
                     var beforeTimestamp = new Date();
-                    request.put({
+                    request.post({
                         url: requestUrl,
                         headers: {
                             "Content-type": "application/json"
                         },
                         body: JSON.stringify({
+                            conversationID: testConversation._id,
                             contents: testMessageContents
                         }),
                         jar: cookieJar
@@ -672,7 +675,7 @@ describe("server", function() {
                 authenticateUser(testGithubUser, testUser, testToken, function() {
                     dbCollections.conversations.findOne.callsArgWith(1, null, testConversation);
                     dbCollections.messages.insertOne.stub.callsArgWith(1, null, true);
-                    request.put({
+                    request.post({
                         url: requestUrl,
                         headers: {
                             "Content-type": "application/json"
@@ -694,12 +697,13 @@ describe("server", function() {
                 authenticateUser(testGithubUser, testUser, testToken, function() {
                     dbCollections.conversations.findOne.callsArgWith(1, null, testConversation);
                     dbCollections.messages.insertOne.stub.callsArgWith(1, null, true);
-                    request.put({
+                    request.post({
                         url: requestUrl,
                         headers: {
                             "Content-type": "application/json"
                         },
                         body: JSON.stringify({
+                            conversationID: testConversation._id,
                             contents: testMessageContents
                         }),
                         jar: cookieJar
@@ -716,12 +720,13 @@ describe("server", function() {
                     dbCollections.conversations.findOne.callsArgWith(1, null, testConversation);
                     dbCollections.messages.insertOne.stub.callsArgWith(1, null, true);
                     var beforeTimestamp = new Date();
-                    request.put({
+                    request.post({
                         url: requestUrl,
                         headers: {
                             "Content-type": "application/json"
                         },
                         body: JSON.stringify({
+                            conversationID: testConversation._id,
                             contents: testMessageContents
                         }),
                         jar: cookieJar
@@ -746,12 +751,13 @@ describe("server", function() {
             authenticateUser(testGithubUser, testUser, testToken, function() {
                 dbCollections.conversations.findOne.callsArgWith(1, null, null);
                 dbCollections.messages.insertOne.stub.callsArgWith(1, null, true);
-                request.put({
+                request.post({
                     url: requestUrl,
                     headers: {
                         "Content-type": "application/json"
                     },
                     body: JSON.stringify({
+                        conversationID: testConversation._id,
                         contents: testMessageContents
                     }),
                     jar: cookieJar
@@ -766,12 +772,13 @@ describe("server", function() {
                 authenticateUser(testGithubUser, testUser, testToken, function() {
                     dbCollections.conversations.findOne.callsArgWith(1, {err: "Database failure"}, null);
                     dbCollections.messages.insertOne.stub.callsArgWith(1, null, true);
-                    request.put({
+                    request.post({
                         url: requestUrl,
                         headers: {
                             "Content-type": "application/json"
                         },
                         body: JSON.stringify({
+                            conversationID: testConversation._id,
                             contents: testMessageContents
                         }),
                         jar: cookieJar
@@ -787,12 +794,13 @@ describe("server", function() {
                 authenticateUser(testGithubUser, testUser, testToken, function() {
                     dbCollections.conversations.findOne.callsArgWith(1, null, testConversation2);
                     dbCollections.messages.insertOne.stub.callsArgWith(1, null, true);
-                    request.put({
+                    request.post({
                         url: requestUrl,
                         headers: {
                             "Content-type": "application/json"
                         },
                         body: JSON.stringify({
+                            conversationID: testConversation2.id,
                             contents: testMessageContents
                         }),
                         jar: cookieJar
@@ -808,12 +816,13 @@ describe("server", function() {
                 authenticateUser(testGithubUser, testUser, testToken, function() {
                     dbCollections.conversations.findOne.callsArgWith(1, null, testConversation);
                     dbCollections.messages.insertOne.stub.callsArgWith(1, {err: "Database failure"}, null);
-                    request.put({
+                    request.post({
                         url: requestUrl,
                         headers: {
                             "Content-type": "application/json"
                         },
                         body: JSON.stringify({
+                            conversationID: testConversation._id,
                             contents: testMessageContents
                         }),
                         jar: cookieJar

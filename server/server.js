@@ -159,9 +159,9 @@ module.exports = function(port, db, githubAuthoriser) {
             }
         });
     });
-    app.put("/api/messages/:id", function(req, res) {
-        var conversationID = req.params.id;
+    app.post("/api/messages", function(req, res) {
         var senderID = req.session.user;
+        var conversationID = req.body.conversationID;
         var message = req.body.contents;
         if (message === "") {
             res.sendStatus(201);
