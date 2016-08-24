@@ -89,5 +89,12 @@ module.exports = function(port, db, githubAuthoriser) {
         });
     });
 
+    // Produce the same ID for any pair of users, regardless of which is the sender
+    function getConversationID(userAId, userBId) {
+        return userAId < userBId ?
+            userAId + "," + userBId :
+            userBId + "," + userAId;
+    }
+
     return app.listen(port);
 };
