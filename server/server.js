@@ -101,6 +101,7 @@ module.exports = function(port, db, githubAuthoriser) {
             }
         });
     });
+
     app.post("/api/conversations", function(req, res) {
         var conversationInfo = req.body;
         var recipientID = conversationInfo.recipient;
@@ -138,6 +139,33 @@ module.exports = function(port, db, githubAuthoriser) {
             }
         });
     });
+
+    app.get("/api/messages", function(req, res) {
+        var senderID = req.session.user;
+        var conversationID = req.body.conversationID;
+        conversations.findOne({
+            _id: conversationID
+        }, function(err, conversation) {
+            if (!err && conversation) {
+                if (conversation.participants.indexOf(senderID) !== -1) {
+                    messages.find({
+                        conversationID: conversationID
+                    }).toArray(function(err, docs) {
+                        if (!err) {
+                            res.json(docs.map(cleanIdField));
+                        } else {
+                            res.sendStatus(500);
+                        }
+                    });
+                } else {
+                    res.sendStatus(403);
+                }
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
+
     app.post("/api/messages", function(req, res) {
         var senderID = req.session.user;
         var conversationID = req.body.conversationID;
@@ -153,6 +181,7 @@ module.exports = function(port, db, githubAuthoriser) {
                 if (conversation.participants.indexOf(senderID) !== -1) {
                     var timestamp = new Date();
                     messages.insertOne({
+                        senderID: senderID,
                         conversationID: conversationID,
                         contents: message,
                         timestamp: timestamp
