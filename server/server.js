@@ -11,6 +11,7 @@ module.exports = function(port, db, githubAuthoriser) {
 
     var users = db.collection("users");
     var conversations = db.collection("conversations");
+    var messages = db.collection("messages");
     var sessions = {};
 
     app.get("/oauth", function(req, res) {
@@ -153,6 +154,44 @@ module.exports = function(port, db, githubAuthoriser) {
                         res.sendStatus(500);
                     }
                 });
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
+    app.put("/api/messages/:id", function(req, res) {
+        var conversationID = req.params.id;
+        var senderID = req.session.user;
+        var message = req.body.contents;
+        if (message === "") {
+            res.sendStatus(201);
+            return;
+        }
+        conversations.findOne({
+            _id: conversationID
+        }, function(err, conversation) {
+            if (!err && conversation) {
+                if (conversation.participants.indexOf(senderID) !== -1) {
+                    var timestamp = new Date();
+                    messages.insertOne({
+                        conversationID: conversationID,
+                        contents: message,
+                        timestamp: timestamp
+                    }, function(err, result) {
+                        if (!err) {
+                            res.json({
+                                id: result._id,
+                                conversationID: result.conversationID,
+                                contents: result.contents,
+                                timestamp: result.timestamp
+                            });
+                        } else {
+                            res.sendStatus(500);
+                        }
+                    });
+                } else {
+                    res.sendStatus(403);
+                }
             } else {
                 res.sendStatus(500);
             }
