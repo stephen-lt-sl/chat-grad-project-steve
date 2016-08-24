@@ -162,6 +162,7 @@ module.exports = function(port, db, githubAuthoriser) {
                 if (conversation.participants.indexOf(senderID) !== -1) {
                     var timestamp = new Date();
                     messages.insertOne({
+                        senderID: senderID,
                         conversationID: conversationID,
                         contents: message,
                         timestamp: timestamp
