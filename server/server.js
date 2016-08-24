@@ -97,5 +97,18 @@ module.exports = function(port, db, githubAuthoriser) {
             userBId + "," + userAId;
     }
 
+    app.get("/api/conversations/:id", function(req, res) {
+        var conversationID = getConversationID(req.session.user, req.params.id);
+        conversations.findOne({
+            _id: conversationID
+        }, function(err, conversation) {
+            if (!err) {
+                res.json(conversation);
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
+
     return app.listen(port);
 };
