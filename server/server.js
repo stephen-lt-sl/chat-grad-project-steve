@@ -77,13 +77,7 @@ module.exports = function(port, db, githubAuthoriser) {
     app.get("/api/users", function(req, res) {
         users.find().toArray(function(err, docs) {
             if (!err) {
-                res.json(docs.map(function(user) {
-                    return {
-                        id: user._id,
-                        name: user.name,
-                        avatarUrl: user.avatarUrl
-                    };
-                }));
+                res.json(docs.map(cleanIdField));
             } else {
                 res.sendStatus(500);
             }
@@ -104,16 +98,9 @@ module.exports = function(port, db, githubAuthoriser) {
         }, function(err, conversation) {
             if (!err) {
                 if (conversation) {
-                    var conversationData = {};
-                    for (var key in conversation) {
-                        if (key === "_id") {
-                            conversationData.id = conversation._id;
-                        } else {
-                            conversationData[key] = conversation[key];
-                        }
-                    }
-                    res.json(conversationData);
-                } else {
+                    res.json(cleanIdField(conversation));
+                }
+                else {
                     res.sendStatus(404);
                 }
             } else {
@@ -121,6 +108,19 @@ module.exports = function(port, db, githubAuthoriser) {
             }
         });
     });
+
+    // Returns a copy of the input with the "_id" field renamed to "id"
+    function cleanIdField(obj) {
+        var cleanObj = {};
+        for (var key in obj) {
+            if (key === "_id") {
+                cleanObj.id = obj._id;
+            } else {
+                cleanObj[key] = obj[key];
+            }
+        }
+        return cleanObj;
+    }
 
     return app.listen(port);
 };
