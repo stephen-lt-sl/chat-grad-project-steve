@@ -1,11 +1,13 @@
 var express = require("express");
 var cookieParser = require("cookie-parser");
+var bodyParser = require("body-parser");
 
 module.exports = function(port, db, githubAuthoriser) {
     var app = express();
 
     app.use(express.static("public"));
     app.use(cookieParser());
+    app.use(bodyParser.json());
 
     var users = db.collection("users");
     var conversations = db.collection("conversations");
@@ -100,13 +102,25 @@ module.exports = function(port, db, githubAuthoriser) {
             _id: conversationID
         }, function(err, conversation) {
             if (!err) {
-                res.json(conversation);
+                if (conversation) {
+                    var conversationData = {};
+                    for (var key in conversation) {
+                        if (key === "_id") {
+                            conversationData.id = conversation._id;
+                        } else {
+                            conversationData[key] = conversation[key];
+                        }
+                    }
+                    res.json(conversationData);
+                }
+                else {
+                    res.sendStatus(404);
+                }
             } else {
                 res.sendStatus(500);
             }
         });
     });
-
     app.post("/api/conversations", function(req, res) {
         var conversationInfo = req.body;
         var recipientID = conversationInfo.recipient;
@@ -115,31 +129,24 @@ module.exports = function(port, db, githubAuthoriser) {
         users.findOne({
             _id: senderID
         }, function(err, sender) {
-            if (!err) {
+            if (!err && sender) {
                 users.findOne({
                     _id: recipientID
                 }, function(err, recipient) {
-                    if (!err) {
+                    if (!err && recipient) {
                         var conversationID = getConversationID(senderID, recipientID);
-                        conversations.findOne({
-                            _id: conversationID
-                        }, function(err, conversation) {
-                            if (!conversation) {
-                                conversations.insertOne({
-                                    _id: conversationID,
-                                    participants: [senderID, recipientID]
-                                }, function(err, result) {
-                                    if(!err) {
-                                        res.json({
-                                            _id: conversationID,
-                                            participants: [senderID, recipientID]
-                                        });
-                                    } else {
-                                        res.sendStatus(500);
-                                    }
+                        var participants = [senderID, recipientID].sort();
+                        conversations.insertOne({
+                            _id: conversationID,
+                            participants: participants
+                        }, function(err, result) {
+                            if (!err) {
+                                res.json({
+                                    id: conversationID,
+                                    participants: participants
                                 });
                             } else {
-                                res.sendStatus(409);
+                                res.sendStatus(500);
                             }
                         });
                     } else {
