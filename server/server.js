@@ -1,13 +1,16 @@
 var express = require("express");
 var cookieParser = require("cookie-parser");
+var bodyParser = require("body-parser");
 
 module.exports = function(port, db, githubAuthoriser) {
     var app = express();
 
     app.use(express.static("public"));
     app.use(cookieParser());
+    app.use(bodyParser.json());
 
     var users = db.collection("users");
+    var conversations = db.collection("conversations");
     var sessions = {};
 
     app.get("/oauth", function(req, res) {
@@ -80,6 +83,76 @@ module.exports = function(port, db, githubAuthoriser) {
                         avatarUrl: user.avatarUrl
                     };
                 }));
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
+
+    // Produce the same ID for any pair of users, regardless of which is the sender
+    function getConversationID(userAId, userBId) {
+        return userAId < userBId ?
+            userAId + "," + userBId :
+            userBId + "," + userAId;
+    }
+
+    app.get("/api/conversations/:id", function(req, res) {
+        var conversationID = getConversationID(req.session.user, req.params.id);
+        conversations.findOne({
+            _id: conversationID
+        }, function(err, conversation) {
+            if (!err) {
+                if (conversation) {
+                    var conversationData = {};
+                    for (var key in conversation) {
+                        if (key === "_id") {
+                            conversationData.id = conversation._id;
+                        } else {
+                            conversationData[key] = conversation[key];
+                        }
+                    }
+                    res.json(conversationData);
+                }
+                else {
+                    res.sendStatus(404);
+                }
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
+    app.post("/api/conversations", function(req, res) {
+        var conversationInfo = req.body;
+        var recipientID = conversationInfo.recipient;
+        var senderID = req.session.user;
+        // Find both the sender and the recipient in the db
+        users.findOne({
+            _id: senderID
+        }, function(err, sender) {
+            if (!err && sender) {
+                users.findOne({
+                    _id: recipientID
+                }, function(err, recipient) {
+                    if (!err && recipient) {
+                        var conversationID = getConversationID(senderID, recipientID);
+                        var participants = [senderID, recipientID].sort();
+                        conversations.insertOne({
+                            _id: conversationID,
+                            participants: participants
+                        }, function(err, result) {
+                            if (!err) {
+                                res.json({
+                                    id: conversationID,
+                                    participants: participants
+                                });
+                            } else {
+                                res.sendStatus(500);
+                            }
+                        });
+                    } else {
+                        res.sendStatus(500);
+                    }
+                });
             } else {
                 res.sendStatus(500);
             }
