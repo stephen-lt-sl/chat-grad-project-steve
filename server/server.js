@@ -187,9 +187,9 @@ module.exports = function(port, db, githubAuthoriser) {
         });
     });
 
-    app.get("/api/messages", function(req, res) {
+    app.get("/api/messages/:id", function(req, res) {
         var senderID = req.session.user;
-        var conversationID = req.body.conversationID;
+        var conversationID = req.params.id;
         conversations.findOne({
             _id: conversationID
         }, function(err, conversation) {
