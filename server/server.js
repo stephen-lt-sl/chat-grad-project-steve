@@ -97,5 +97,43 @@ module.exports = function(port, db, githubAuthoriser) {
             userBId + "," + userAId;
     }
 
+    app.post("/api/conversations", function(req, res) {
+        var conversationInfo = req.body;
+        var recipientID = conversationInfo.other;
+        var senderID = req.session.user;
+        // Find both the sender and the recipient in the db
+        users.findOne({
+            _id: senderID
+        }, function(err, sender) {
+            if (!err) {
+                users.findOne({
+                    _id: recipientID
+                }, function(err, recipient) {
+                    if (!err) {
+                        // Produce the same ID for any pair of users, regardless of which is the sender
+                        var conversationID = senderID < recipientID ?
+                            senderID + "," + recipientID :
+                            recipientID + "," + senderID;
+                        conversations.findOne({
+                            _id: conversationID
+                        }, function(err, conversation) {
+                            if (!conversation) {
+                                conversations.insertOne({
+                                    _id: conversationID,
+                                    participants: [senderID, recipientID]
+                                });
+                            }
+                            res.sendStatus(200);
+                        });
+                    } else {
+                        res.sendStatus(500);
+                    }
+                });
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
+
     return app.listen(port);
 };
