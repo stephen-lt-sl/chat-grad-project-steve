@@ -13,9 +13,14 @@
             <h2>List of registered users</h2>
             <ul>
                 <li ng-repeat="user in users">
-                    {{user.name}}
+                    {{user.name}} - <a href="" ng-click="getConversation(user.id)">(Chat)</a>
                 </li>
             </ul>
+            <div>
+                <div ng-repeat="conversation in conversations" style="width:200px; height:400px; border:2px solid blue; float: left">
+
+                </div>
+            </div>
         </section>
     </body>
 </html>
