@@ -13,9 +13,20 @@
             <h2>List of registered users</h2>
             <ul>
                 <li ng-repeat="user in users">
-                    {{user.name}}
+                    {{user.name}} - <a href="" ng-click="getConversation(user.id)">(Chat)</a>
                 </li>
             </ul>
+            <div>
+                <div ng-repeat="(idx, conversation) in conversations track by $index" style="width:200px; height:400px; border:2px solid blue; float: left">
+                    <div ng-repeat="message in conversation.messages">
+                        {{message.contents}}
+                    </div>
+                    <form id="message-form" ng-submit="sendMessage(idx)">
+                        <input id="new-message" ng-model="conversation.messageEntryText" placeholder="New message...">
+                        <input id="send-message" type="submit" value="Send" class="button">
+                    </form>
+                </div>
+            </div>
         </section>
     </body>
 </html>

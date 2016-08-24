@@ -1,13 +1,17 @@
 var express = require("express");
 var cookieParser = require("cookie-parser");
+var bodyParser = require("body-parser");
 
 module.exports = function(port, db, githubAuthoriser) {
     var app = express();
 
     app.use(express.static("public"));
     app.use(cookieParser());
+    app.use(bodyParser.json());
 
     var users = db.collection("users");
+    var conversations = db.collection("conversations");
+    var messages = db.collection("messages");
     var sessions = {};
 
     app.get("/oauth", function(req, res) {
@@ -73,18 +77,154 @@ module.exports = function(port, db, githubAuthoriser) {
     app.get("/api/users", function(req, res) {
         users.find().toArray(function(err, docs) {
             if (!err) {
-                res.json(docs.map(function(user) {
-                    return {
-                        id: user._id,
-                        name: user.name,
-                        avatarUrl: user.avatarUrl
-                    };
-                }));
+                res.json(docs.map(cleanIdField));
             } else {
                 res.sendStatus(500);
             }
         });
     });
+
+    app.get("/api/conversations/:id", function(req, res) {
+        var conversationID = getConversationID(req.session.user, req.params.id);
+        conversations.findOne({
+            _id: conversationID
+        }, function(err, conversation) {
+            if (!err) {
+                if (conversation) {
+                    res.json(cleanIdField(conversation));
+                }
+                else {
+                    res.sendStatus(404);
+                }
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
+
+    app.post("/api/conversations", function(req, res) {
+        var conversationInfo = req.body;
+        var recipientID = conversationInfo.recipient;
+        var senderID = req.session.user;
+        // Find both the sender and the recipient in the db
+        users.findOne({
+            _id: senderID
+        }, function(err, sender) {
+            if (!err && sender) {
+                users.findOne({
+                    _id: recipientID
+                }, function(err, recipient) {
+                    if (!err && recipient) {
+                        var conversationID = getConversationID(senderID, recipientID);
+                        var participants = [senderID, recipientID].sort();
+                        conversations.insertOne({
+                            _id: conversationID,
+                            participants: participants
+                        }, function(err, result) {
+                            if (!err) {
+                                res.json({
+                                    id: conversationID,
+                                    participants: participants
+                                });
+                            } else {
+                                res.sendStatus(500);
+                            }
+                        });
+                    } else {
+                        res.sendStatus(500);
+                    }
+                });
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
+
+    app.get("/api/messages/:id", function(req, res) {
+        var senderID = req.session.user;
+        var conversationID = req.params.id;
+        conversations.findOne({
+            _id: conversationID
+        }, function(err, conversation) {
+            if (!err && conversation) {
+                if (conversation.participants.indexOf(senderID) !== -1) {
+                    messages.find({
+                        conversationID: conversationID
+                    }).toArray(function(err, docs) {
+                        if (!err) {
+                            res.json(docs.map(cleanIdField));
+                        } else {
+                            res.sendStatus(500);
+                        }
+                    });
+                } else {
+                    res.sendStatus(403);
+                }
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
+
+    app.post("/api/messages", function(req, res) {
+        var senderID = req.session.user;
+        var conversationID = req.body.conversationID;
+        var message = req.body.contents;
+        if (message === "") {
+            res.sendStatus(201);
+            return;
+        }
+        conversations.findOne({
+            _id: conversationID
+        }, function(err, conversation) {
+            if (!err && conversation) {
+                if (conversation.participants.indexOf(senderID) !== -1) {
+                    var timestamp = new Date();
+                    messages.insertOne({
+                        senderID: senderID,
+                        conversationID: conversationID,
+                        contents: message,
+                        timestamp: timestamp
+                    }, function(err, result) {
+                        if (!err) {
+                            res.json({
+                                id: result._id,
+                                conversationID: result.conversationID,
+                                contents: result.contents,
+                                timestamp: result.timestamp
+                            });
+                        } else {
+                            res.sendStatus(500);
+                        }
+                    });
+                } else {
+                    res.sendStatus(403);
+                }
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
+
+    // Produce the same ID for any pair of users, regardless of which is the sender
+    function getConversationID(userAId, userBId) {
+        return userAId < userBId ?
+            userAId + "," + userBId :
+            userBId + "," + userAId;
+    }
+
+    // Returns a copy of the input with the "_id" field renamed to "id"
+    function cleanIdField(obj) {
+        var cleanObj = {};
+        for (var key in obj) {
+            if (key === "_id") {
+                cleanObj.id = obj._id;
+            } else {
+                cleanObj[key] = obj[key];
+            }
+        }
+        return cleanObj;
+    }
 
     return app.listen(port);
 };

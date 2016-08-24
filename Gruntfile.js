@@ -51,6 +51,21 @@ module.exports = function(grunt) {
         }
     });
 
+    grunt.registerTask("serve", "Task that runs the server.", function () {
+        var done = this.async();
+        var cmd = process.execPath;
+        process.env.DEV_MODE = true;
+        grunt.util.spawn({
+            cmd: cmd,
+            args: ["server.js"]
+        }, function(err) {
+            if (err) {
+                return done(err);
+            }
+            done();
+        });
+    });
+
     grunt.registerMultiTask("istanbul_report", "Solo task for generating a report over multiple files.", function () {
         var done = this.async();
         var cmd = process.execPath;
