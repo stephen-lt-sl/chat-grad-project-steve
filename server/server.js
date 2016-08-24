@@ -99,7 +99,7 @@ module.exports = function(port, db, githubAuthoriser) {
 
     app.post("/api/conversations", function(req, res) {
         var conversationInfo = req.body;
-        var recipientID = conversationInfo.other;
+        var recipientID = conversationInfo.recipient;
         var senderID = req.session.user;
         // Find both the sender and the recipient in the db
         users.findOne({
@@ -110,10 +110,7 @@ module.exports = function(port, db, githubAuthoriser) {
                     _id: recipientID
                 }, function(err, recipient) {
                     if (!err) {
-                        // Produce the same ID for any pair of users, regardless of which is the sender
-                        var conversationID = senderID < recipientID ?
-                            senderID + "," + recipientID :
-                            recipientID + "," + senderID;
+                        var conversationID = getConversationID(senderID, recipientID);
                         conversations.findOne({
                             _id: conversationID
                         }, function(err, conversation) {
@@ -121,9 +118,19 @@ module.exports = function(port, db, githubAuthoriser) {
                                 conversations.insertOne({
                                     _id: conversationID,
                                     participants: [senderID, recipientID]
+                                }, function(err, result) {
+                                    if(!err) {
+                                        res.json({
+                                            _id: conversationID,
+                                            participants: [senderID, recipientID]
+                                        });
+                                    } else {
+                                        res.sendStatus(500);
+                                    }
                                 });
+                            } else {
+                                res.sendStatus(409);
                             }
-                            res.sendStatus(200);
                         });
                     } else {
                         res.sendStatus(500);
