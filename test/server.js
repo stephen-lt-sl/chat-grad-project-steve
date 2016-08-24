@@ -22,6 +22,15 @@ var testGithubUser = {
     name: "Bob Bilson",
     avatar_url: "http://avatar.url.com/u=test"
 };
+var testGithubUser2 = {
+    login: "charlie",
+    name: "Charlie Colinson",
+    avatar_url: "http://avatar.url.com/u=charlie_colinson"
+};
+var testConversation = {
+    _id: "bob,charlie",
+    participants: ["bob", "charlie"]
+};
 var testToken = "123123";
 var testExpiredToken = "987978";
 
@@ -37,13 +46,19 @@ describe("server", function() {
             users: {
                 find: sinon.stub(),
                 findOne: sinon.stub(),
-                insertOne: sinon.spy()
+                insertOne: sinon.stub()
+            },
+            conversations: {
+                find: sinon.stub(),
+                findOne: sinon.stub(),
+                insertOne: sinon.stub()
             }
         };
         db = {
             collection: sinon.stub()
         };
         db.collection.withArgs("users").returns(dbCollections.users);
+        db.collection.withArgs("conversations").returns(dbCollections.conversations);
 
         githubAuthoriser = {
             authorise: function() {},
@@ -277,6 +292,91 @@ describe("server", function() {
             authenticateUser(testGithubUser, testUser, testToken, function() {
                 allUsers.toArray.callsArgWith(0, {err: "Database failure"}, null);
 
+                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                    assert.equal(response.statusCode, 500);
+                    done();
+                });
+            });
+        });
+    });
+    describe("GET /api/conversations/:id", function() {
+        var requestUrl = baseUrl + "/api/conversations/" + testUser2._id;
+        var requestUrl2 = baseUrl + "/api/conversations/" + testUser._id;
+        it("responds with status code 401 if user not authenticated", function(done) {
+            request(requestUrl, function(error, response) {
+                assert.equal(response.statusCode, 401);
+                done();
+            });
+        });
+        it("responds with status code 401 if user has an unrecognised session token", function(done) {
+            cookieJar.setCookie(request.cookie("sessionToken=" + testExpiredToken), baseUrl);
+            request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                assert.equal(response.statusCode, 401);
+                done();
+            });
+        });
+        it("attempts to find conversation with correct ID if user is authenticated", function(done) {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
+                dbCollections.conversations.findOne.callsArgWith(1, null, testConversation);
+                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                    assert(dbCollections.conversations.findOne.calledOnce);
+                    assert.deepEqual(dbCollections.conversations.findOne.firstCall.args[0], {
+                        _id: "bob,charlie"
+                    });
+                    done();
+                });
+            });
+        });
+        it("responds with status code 200 if user is authenticated and conversation exists", function(done) {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
+                dbCollections.conversations.findOne.callsArgWith(1, null, testConversation);
+                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                    assert.equal(response.statusCode, 200);
+                    done();
+                });
+            });
+        });
+        it("responds with a body that is a JSON representation of the conversation if user is authenticated " +
+            "and conversation exists", function(done) {
+                authenticateUser(testGithubUser, testUser, testToken, function() {
+                    dbCollections.conversations.findOne.callsArgWith(1, null, testConversation);
+                    request({url: requestUrl, jar: cookieJar}, function(error, response, body) {
+                        assert.deepEqual(JSON.parse(body), {
+                                id: "bob,charlie",
+                                participants: ["bob", "charlie"]
+                            });
+                        done();
+                    });
+                });
+            }
+        );
+        it("searches for an identical conversation ID regardless of which participant creates the conversation",
+            function(done) {
+                authenticateUser(testGithubUser2, testUser2, testToken, function() {
+                    dbCollections.conversations.findOne.callsArgWith(1, null, testConversation);
+                    request({url: requestUrl2, jar: cookieJar}, function(error, response, body) {
+                        assert(dbCollections.conversations.findOne.calledOnce);
+                        assert.deepEqual(
+                            dbCollections.conversations.findOne.firstCall.args[0],
+                            {_id: testConversation._id}
+                        );
+                        done();
+                    });
+                });
+            }
+        );
+        it("responds with status code 404 if user is authenticated and conversation does not exist", function(done) {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
+                dbCollections.conversations.findOne.callsArgWith(1, null, null);
+                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                    assert.equal(response.statusCode, 404);
+                    done();
+                });
+            });
+        });
+        it("responds with status code 500 if database error", function(done) {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
+                dbCollections.conversations.findOne.callsArgWith(1, {err: "Database failure"}, null);
                 request({url: requestUrl, jar: cookieJar}, function(error, response) {
                     assert.equal(response.statusCode, 500);
                     done();
