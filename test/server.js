@@ -603,7 +603,8 @@ describe("server", function() {
         });
     });
     describe("GET /api/messages", function() {
-        var requestUrl = baseUrl + "/api/messages";
+        var requestUrl = baseUrl + "/api/messages/" + testConversation._id;
+        var requestUrl2 = baseUrl + "/api/messages/" + testConversation2._id;
         var conversationMessages;
         beforeEach(function() {
             conversationMessages = {
@@ -632,16 +633,7 @@ describe("server", function() {
                         testMessage,
                         testMessage2
                     ]);
-                    request({
-                        url: requestUrl,
-                        jar: cookieJar,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            conversationID: testConversation._id
-                        })
-                    }, function(error, response) {
+                    request({url: requestUrl, jar: cookieJar}, function(error, response) {
                         assert(dbCollections.conversations.findOne.calledOnce);
                         assert.deepEqual(dbCollections.conversations.findOne.firstCall.args[0], {
                             _id: testConversation._id
@@ -663,16 +655,7 @@ describe("server", function() {
                         testMessage,
                         testMessage2
                     ]);
-                    request({
-                        url: requestUrl,
-                        jar: cookieJar,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            conversationID: testConversation._id
-                        })
-                    }, function(error, response) {
+                    request({url: requestUrl, jar: cookieJar}, function(error, response) {
                         assert.equal(response.statusCode, 200);
                         done();
                     });
@@ -687,16 +670,7 @@ describe("server", function() {
                         testMessage,
                         testMessage2
                     ]);
-                    request({
-                        url: requestUrl,
-                        jar: cookieJar,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            conversationID: testConversation._id
-                        })
-                    }, function(error, response) {
+                    request({url: requestUrl, jar: cookieJar}, function(error, response) {
                         assert.deepEqual(JSON.parse(response.body), [
                             {
                                 id: "507f1f77bcf86cd799439011",
@@ -722,16 +696,7 @@ describe("server", function() {
             authenticateUser(testGithubUser, testUser, testToken, function() {
                 dbCollections.conversations.findOne.callsArgWith(1, null, testConversation);
                 conversationMessages.toArray.callsArgWith(0, {err: "Database failure"}, null);
-                request({
-                    url: requestUrl,
-                    jar: cookieJar,
-                    headers: {
-                        "Content-type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        conversationID: testConversation._id
-                    })
-                }, function(error, response) {
+                request({url: requestUrl, jar: cookieJar}, function(error, response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
@@ -745,16 +710,7 @@ describe("server", function() {
                         testMessage,
                         testMessage2
                     ]);
-                    request({
-                        url: requestUrl,
-                        jar: cookieJar,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            conversationID: testConversation2._id
-                        })
-                    }, function(error, response) {
+                    request({url: requestUrl2, jar: cookieJar}, function(error, response) {
                         assert.equal(response.statusCode, 403);
                         done();
                     });
@@ -768,16 +724,7 @@ describe("server", function() {
                     testMessage,
                     testMessage2
                 ]);
-                request({
-                    url: requestUrl,
-                    jar: cookieJar,
-                    headers: {
-                        "Content-type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        conversationID: testConversation._id
-                    })
-                }, function(error, response) {
+                request({url: requestUrl, jar: cookieJar}, function(error, response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
@@ -790,16 +737,7 @@ describe("server", function() {
                     testMessage,
                     testMessage2
                 ]);
-                request({
-                    url: requestUrl,
-                    jar: cookieJar,
-                    headers: {
-                        "Content-type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        conversationID: testConversation._id
-                    })
-                }, function(error, response) {
+                request({url: requestUrl, jar: cookieJar}, function(error, response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
