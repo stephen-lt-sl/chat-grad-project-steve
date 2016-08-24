@@ -611,7 +611,7 @@ describe("server", function() {
             // own output correctly during the callback
             dbCollections.messages.insertOne = function(obj, callback) {
                 var dbObj = obj;
-                dbObj._id = testObjectID;
+                dbObj._id = testMessage._id;
                 dbCollections.messages.insertOne.stub(obj, function(err, success) {
                     callback(err, success ? dbObj : null);
                 });
@@ -626,8 +626,8 @@ describe("server", function() {
                     "Content-type": "application/json"
                 },
                 body: JSON.stringify({
-                    conversationID: testConversation._id,
-                    contents: testMessageContents
+                    conversationID: testMessage.conversationID,
+                    contents: testMessage.contents
                 })
             }, function(error, response) {
                 assert.equal(response.statusCode, 401);
@@ -642,8 +642,8 @@ describe("server", function() {
                     "Content-type": "application/json"
                 },
                 body: JSON.stringify({
-                    conversationID: testConversation._id,
-                    contents: testMessageContents
+                    conversationID: testMessage.conversationID,
+                    contents: testMessage.contents
                 }),
                 jar: cookieJar
             }, function(error, response) {
@@ -663,8 +663,8 @@ describe("server", function() {
                             "Content-type": "application/json"
                         },
                         body: JSON.stringify({
-                            conversationID: testConversation._id,
-                            contents: testMessageContents
+                            conversationID: testMessage.conversationID,
+                            contents: testMessage.contents
                         }),
                         jar: cookieJar
                     }, function(error, response, body) {
@@ -672,7 +672,7 @@ describe("server", function() {
                         assert(dbCollections.messages.insertOne.stub.calledOnce, "insertOne not called");
                         var insertedMessage = dbCollections.messages.insertOne.stub.firstCall.args[0];
                         assert.equal(insertedMessage.conversationID, testConversation._id);
-                        assert.equal(insertedMessage.contents, testMessageContents);
+                        assert.equal(insertedMessage.contents, testMessage.contents);
                         assert(beforeTimestamp.getTime() <= insertedMessage.timestamp.getTime(),
                             "Timestamp is earlier than call"
                         );
@@ -717,8 +717,8 @@ describe("server", function() {
                             "Content-type": "application/json"
                         },
                         body: JSON.stringify({
-                            conversationID: testConversation._id,
-                            contents: testMessageContents
+                            conversationID: testMessage.conversationID,
+                            contents: testMessage.contents
                         }),
                         jar: cookieJar
                     }, function(error, response) {
@@ -740,8 +740,8 @@ describe("server", function() {
                             "Content-type": "application/json"
                         },
                         body: JSON.stringify({
-                            conversationID: testConversation._id,
-                            contents: testMessageContents
+                            conversationID: testMessage.conversationID,
+                            contents: testMessage.contents
                         }),
                         jar: cookieJar
                     }, function(error, response, body) {
@@ -749,7 +749,7 @@ describe("server", function() {
                         var receivedMessage = JSON.parse(body);
                         var receivedTimestamp = new Date(receivedMessage.timestamp);
                         assert.equal(receivedMessage.conversationID, testConversation._id);
-                        assert.equal(receivedMessage.contents, testMessageContents);
+                        assert.equal(receivedMessage.contents, testMessage.contents);
                         assert(beforeTimestamp.getTime() <= receivedTimestamp.getTime(),
                             "Timestamp is earlier than call"
                         );
@@ -771,8 +771,8 @@ describe("server", function() {
                         "Content-type": "application/json"
                     },
                     body: JSON.stringify({
-                        conversationID: testConversation._id,
-                        contents: testMessageContents
+                        conversationID: testMessage.conversationID,
+                        contents: testMessage.contents
                     }),
                     jar: cookieJar
                 }, function(error, response) {
@@ -792,8 +792,8 @@ describe("server", function() {
                             "Content-type": "application/json"
                         },
                         body: JSON.stringify({
-                            conversationID: testConversation._id,
-                            contents: testMessageContents
+                            conversationID: testMessage.conversationID,
+                            contents: testMessage.contents
                         }),
                         jar: cookieJar
                     }, function(error, response) {
@@ -815,7 +815,7 @@ describe("server", function() {
                         },
                         body: JSON.stringify({
                             conversationID: testConversation2.id,
-                            contents: testMessageContents
+                            contents: testMessage.contents
                         }),
                         jar: cookieJar
                     }, function(error, response) {
@@ -836,8 +836,8 @@ describe("server", function() {
                             "Content-type": "application/json"
                         },
                         body: JSON.stringify({
-                            conversationID: testConversation._id,
-                            contents: testMessageContents
+                            conversationID: testMessage.conversationID,
+                            contents: testMessage.contents
                         }),
                         jar: cookieJar
                     }, function(error, response) {
