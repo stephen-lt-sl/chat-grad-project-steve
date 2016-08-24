@@ -105,31 +105,24 @@ module.exports = function(port, db, githubAuthoriser) {
         users.findOne({
             _id: senderID
         }, function(err, sender) {
-            if (!err) {
+            if (!err && sender) {
                 users.findOne({
                     _id: recipientID
                 }, function(err, recipient) {
-                    if (!err) {
+                    if (!err && recipient) {
                         var conversationID = getConversationID(senderID, recipientID);
-                        conversations.findOne({
-                            _id: conversationID
-                        }, function(err, conversation) {
-                            if (!conversation) {
-                                conversations.insertOne({
-                                    _id: conversationID,
-                                    participants: [senderID, recipientID]
-                                }, function(err, result) {
-                                    if(!err) {
-                                        res.json({
-                                            _id: conversationID,
-                                            participants: [senderID, recipientID]
-                                        });
-                                    } else {
-                                        res.sendStatus(500);
-                                    }
+                        var participants = [senderID, recipientID].sort();
+                        conversations.insertOne({
+                            _id: conversationID,
+                            participants: participants
+                        }, function(err, result) {
+                            if (!err) {
+                                res.json({
+                                    id: conversationID,
+                                    participants: participants
                                 });
                             } else {
-                                res.sendStatus(409);
+                                res.sendStatus(500);
                             }
                         });
                     } else {
