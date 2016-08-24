@@ -103,7 +103,19 @@ module.exports = function(port, db, githubAuthoriser) {
             _id: conversationID
         }, function(err, conversation) {
             if (!err) {
-                res.json(conversation);
+                if (conversation) {
+                    var conversationData = {};
+                    for (var key in conversation) {
+                        if (key === "_id") {
+                            conversationData.id = conversation._id;
+                        } else {
+                            conversationData[key] = conversation[key];
+                        }
+                    }
+                    res.json(conversationData);
+                } else {
+                    res.sendStatus(404);
+                }
             } else {
                 res.sendStatus(500);
             }
