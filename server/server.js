@@ -77,13 +77,7 @@ module.exports = function(port, db, githubAuthoriser) {
     app.get("/api/users", function(req, res) {
         users.find().toArray(function(err, docs) {
             if (!err) {
-                res.json(docs.map(function(user) {
-                    return {
-                        id: user._id,
-                        name: user.name,
-                        avatarUrl: user.avatarUrl
-                    };
-                }));
+                res.json(docs.map(cleanIdField));
             } else {
                 res.sendStatus(500);
             }
@@ -96,6 +90,24 @@ module.exports = function(port, db, githubAuthoriser) {
             userAId + "," + userBId :
             userBId + "," + userAId;
     }
+
+    app.get("/api/conversations/:id", function(req, res) {
+        var conversationID = getConversationID(req.session.user, req.params.id);
+        conversations.findOne({
+            _id: conversationID
+        }, function(err, conversation) {
+            if (!err) {
+                if (conversation) {
+                    res.json(cleanIdField(conversation));
+                }
+                else {
+                    res.sendStatus(404);
+                }
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
 
     app.post("/api/conversations", function(req, res) {
         var conversationInfo = req.body;
@@ -134,6 +146,19 @@ module.exports = function(port, db, githubAuthoriser) {
             }
         });
     });
+
+    // Returns a copy of the input with the "_id" field renamed to "id"
+    function cleanIdField(obj) {
+        var cleanObj = {};
+        for (var key in obj) {
+            if (key === "_id") {
+                cleanObj.id = obj._id;
+            } else {
+                cleanObj[key] = obj[key];
+            }
+        }
+        return cleanObj;
+    }
 
     return app.listen(port);
 };
