@@ -54,9 +54,9 @@ describe("server", function() {
     afterEach(function() {
         serverInstance.close();
     });
-    function authenticateUser(user, token, callback) {
+    function authenticateUser(githubUser, user, token, callback) {
         sinon.stub(githubAuthoriser, "authorise", function(req, authCallback) {
-            authCallback(user, token);
+            authCallback(githubUser, token);
         });
 
         dbCollections.users.findOne.callsArgWith(1, null, user);
@@ -163,8 +163,19 @@ describe("server", function() {
                 done();
             });
         });
+        it("attempts to find user with correct ID if user is authenticated", function(done) {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
+                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                    assert(dbCollections.users.findOne.calledTwice);
+                    assert.deepEqual(dbCollections.users.findOne.secondCall.args[0], {
+                        _id: "bob"
+                    });
+                    done();
+                });
+            });
+        });
         it("responds with status code 200 if user is authenticated", function(done) {
-            authenticateUser(testUser, testToken, function() {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
                 request({url: requestUrl, jar: cookieJar}, function(error, response) {
                     assert.equal(response.statusCode, 200);
                     done();
@@ -172,7 +183,7 @@ describe("server", function() {
             });
         });
         it("responds with a body that is a JSON representation of the user if user is authenticated", function(done) {
-            authenticateUser(testUser, testToken, function() {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
                 request({url: requestUrl, jar: cookieJar}, function(error, response, body) {
                     assert.deepEqual(JSON.parse(body), {
                         _id: "bob",
@@ -183,8 +194,19 @@ describe("server", function() {
                 });
             });
         });
+        it("responds with status code 404 if user is authenticated", function(done) {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
+
+                dbCollections.users.findOne.callsArgWith(1, {err: "Database error"}, null);
+
+                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                    assert.equal(response.statusCode, 500);
+                    done();
+                });
+            });
+        });
         it("responds with status code 500 if database error", function(done) {
-            authenticateUser(testUser, testToken, function() {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
 
                 dbCollections.users.findOne.callsArgWith(1, {err: "Database error"}, null);
 
@@ -218,7 +240,7 @@ describe("server", function() {
             });
         });
         it("responds with status code 200 if user is authenticated", function(done) {
-            authenticateUser(testUser, testToken, function() {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
                 allUsers.toArray.callsArgWith(0, null, [testUser]);
 
                 request({url: requestUrl, jar: cookieJar}, function(error, response) {
@@ -228,7 +250,7 @@ describe("server", function() {
             });
         });
         it("responds with a body that is a JSON representation of the user if user is authenticated", function(done) {
-            authenticateUser(testUser, testToken, function() {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
                 allUsers.toArray.callsArgWith(0, null, [
                         testUser,
                         testUser2
@@ -252,7 +274,7 @@ describe("server", function() {
             });
         });
         it("responds with status code 500 if database error", function(done) {
-            authenticateUser(testUser, testToken, function() {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
                 allUsers.toArray.callsArgWith(0, {err: "Database failure"}, null);
 
                 request({url: requestUrl, jar: cookieJar}, function(error, response) {
