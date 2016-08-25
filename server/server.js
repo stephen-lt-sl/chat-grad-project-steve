@@ -10,6 +10,7 @@ module.exports = function(port, db, githubAuthoriser) {
     app.use(bodyParser.json());
 
     var users = db.collection("users");
+    var conversations = db.collection("conversations");
     var sessions = {};
 
     app.get("/oauth", function(req, res) {
@@ -87,6 +88,13 @@ module.exports = function(port, db, githubAuthoriser) {
             }
         });
     });
+
+    // Produce the same ID for any pair of users, regardless of which is the sender
+    function getConversationID(userAId, userBId) {
+        return userAId < userBId ?
+            userAId + "," + userBId :
+            userBId + "," + userAId;
+    }
 
     return app.listen(port);
 };
