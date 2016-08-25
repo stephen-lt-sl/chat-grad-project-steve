@@ -147,6 +147,46 @@ module.exports = function(port, db, githubAuthoriser) {
         });
     });
 
+    app.post("/api/messages", function(req, res) {
+        var senderID = req.session.user;
+        var conversationID = req.body.conversationID;
+        var message = req.body.contents;
+        if (message === "") {
+            res.sendStatus(201);
+            return;
+        }
+        conversations.findOne({
+            _id: conversationID
+        }, function(err, conversation) {
+            if (!err && conversation) {
+                if (conversation.participants.indexOf(senderID) !== -1) {
+                    var timestamp = new Date();
+                    messages.insertOne({
+                        senderID: senderID,
+                        conversationID: conversationID,
+                        contents: message,
+                        timestamp: timestamp
+                    }, function(err, result) {
+                        if (!err) {
+                            res.json({
+                                id: result._id,
+                                conversationID: result.conversationID,
+                                contents: result.contents,
+                                timestamp: result.timestamp
+                            });
+                        } else {
+                            res.sendStatus(500);
+                        }
+                    });
+                } else {
+                    res.sendStatus(403);
+                }
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
+
     // Returns a copy of the input with the "_id" field renamed to "id"
     function cleanIdField(obj) {
         var cleanObj = {};
