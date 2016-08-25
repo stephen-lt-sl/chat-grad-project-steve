@@ -1,4 +1,5 @@
 /*global console*/
+/*global Promise*/
 (function() {
     var app = angular.module("ChatApp", []);
 
@@ -38,50 +39,61 @@
             }
         }
 
-        // Gets the conversation with the given recipient from the server, or creates a new conversation with the
-        // recipient on the server if it does not already exist; afterwards the conversation is displayed in the client
-        function openConversation(recipientID) {
-            $http.get("/api/conversations/" + recipientID).then(function(conversationResult) {
-                // Conversation received from server
-                displayConversation(conversationResult.data);
+        // Returns a promise whose "then" receives the conversation with the recipient
+        function setupConversation(recipientID) {
+            return $http.get("/api/conversations/" + recipientID).then(function(conversationResult) {
+                return conversationResult;
             }, function() {
                 // Conversation not received, create new conversation with recipient
-                $http({
+                return $http({
                     method: "POST",
                     url: "/api/conversations/",
                     headers: {
                         "Content-type": "application/json"
                     },
                     data: JSON.stringify({recipient: recipientID})
-                }).then(function(conversationResult) {
-                    displayConversation(conversationResult.data);
                 });
+            }).then(function(conversationResult) {
+                return conversationResult.data;
+            });
+        }
+
+        // Gets the conversation with the given recipient from the server, or creates a new conversation with the
+        // recipient on the server if it does not already exist; afterwards the conversation is displayed in the client
+        function openConversation(recipientID) {
+            setupConversation(recipientID).then(function(conversation) {
+                displayConversation(conversation);
             });
         }
 
         function getMessages(idx) {
             var conversationID = $scope.conversations[idx].data.id;
-            $http.get("/api/messages/" + conversationID).then(function(messagesResult) {
+            return $http.get("/api/messages/" + conversationID).then(function(messagesResult) {
                 $scope.conversations[idx].messages = messagesResult.data;
             });
         }
 
-        function sendMessage(idx) {
-            var conversationID = $scope.conversations[idx].data.id;
-            $http({
+        function submitMessage(conversationID, contents) {
+            return $http({
                 method: "POST",
                 url: "/api/messages",
                 headers: {
                     "Content-type": "application/json"
                 },
                 data: JSON.stringify({
-                    contents: $scope.conversations[idx].messageEntryText,
+                    contents: contents,
                     conversationID: conversationID
                 })
-            }).then(function(messageAddResult) {
+            });
+        }
+
+        function sendMessage(idx) {
+            var conversationID = $scope.conversations[idx].data.id;
+            var contents = $scope.conversations[idx].messageEntryText;
+            $scope.conversations[idx].messageEntryText = "";
+            submitMessage(conversationID, contents).then(function(messageAddResult) {
                 getMessages(idx);
             });
-            $scope.conversations[idx].messageEntryText = "";
         }
     });
 })();
