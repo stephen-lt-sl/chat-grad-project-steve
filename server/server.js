@@ -109,6 +109,44 @@ module.exports = function(port, db, githubAuthoriser) {
         });
     });
 
+    app.post("/api/conversations", function(req, res) {
+        var conversationInfo = req.body;
+        var recipientID = conversationInfo.recipient;
+        var senderID = req.session.user;
+        // Find both the sender and the recipient in the db
+        users.findOne({
+            _id: senderID
+        }, function(err, sender) {
+            if (!err && sender) {
+                users.findOne({
+                    _id: recipientID
+                }, function(err, recipient) {
+                    if (!err && recipient) {
+                        var conversationID = getConversationID(senderID, recipientID);
+                        var participants = [senderID, recipientID].sort();
+                        conversations.insertOne({
+                            _id: conversationID,
+                            participants: participants
+                        }, function(err, result) {
+                            if (!err) {
+                                res.json({
+                                    id: conversationID,
+                                    participants: participants
+                                });
+                            } else {
+                                res.sendStatus(500);
+                            }
+                        });
+                    } else {
+                        res.sendStatus(500);
+                    }
+                });
+            } else {
+                res.sendStatus(500);
+            }
+        });
+    });
+
     // Returns a copy of the input with the "_id" field renamed to "id"
     function cleanIdField(obj) {
         var cleanObj = {};

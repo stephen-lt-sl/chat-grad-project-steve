@@ -301,7 +301,6 @@ describe("server", function() {
     });
     describe("GET /api/conversations/:id", function() {
         var requestUrl = baseUrl + "/api/conversations/" + testUser2._id;
-        var requestUrl2 = baseUrl + "/api/conversations/" + testUser._id;
         it("responds with status code 401 if user not authenticated", function(done) {
             request(requestUrl, function(error, response) {
                 assert.equal(response.statusCode, 401);
@@ -350,21 +349,6 @@ describe("server", function() {
                 });
             }
         );
-        it("searches for an identical conversation ID regardless of which participant creates the conversation",
-            function(done) {
-                authenticateUser(testGithubUser2, testUser2, testToken, function() {
-                    dbCollections.conversations.findOne.callsArgWith(1, null, testConversation);
-                    request({url: requestUrl2, jar: cookieJar}, function(error, response, body) {
-                        assert(dbCollections.conversations.findOne.calledOnce);
-                        assert.deepEqual(
-                            dbCollections.conversations.findOne.firstCall.args[0],
-                            {_id: testConversation._id}
-                        );
-                        done();
-                    });
-                });
-            }
-        );
         it("responds with status code 404 if user is authenticated and conversation does not exist", function(done) {
             authenticateUser(testGithubUser, testUser, testToken, function() {
                 dbCollections.conversations.findOne.callsArgWith(1, null, null);
@@ -378,6 +362,212 @@ describe("server", function() {
             authenticateUser(testGithubUser, testUser, testToken, function() {
                 dbCollections.conversations.findOne.callsArgWith(1, {err: "Database failure"}, null);
                 request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                    assert.equal(response.statusCode, 500);
+                    done();
+                });
+            });
+        });
+    });
+    describe("POST /api/conversations", function() {
+        var requestUrl = baseUrl + "/api/conversations";
+        it("responds with status code 401 if user not authenticated", function(done) {
+            request.post({
+                url: requestUrl,
+                headers: {
+                    "Content-type": "application/json"
+                },
+                body: JSON.stringify({recipient: "charlie"})
+            }, function(error, response) {
+                assert.equal(response.statusCode, 401);
+                done();
+            });
+        });
+        it("responds with status code 401 if user has an unrecognised session token", function(done) {
+            cookieJar.setCookie(request.cookie("sessionToken=" + testExpiredToken), baseUrl);
+            request.post({
+                url: requestUrl,
+                headers: {
+                    "Content-type": "application/json"
+                },
+                body: JSON.stringify({recipient: "charlie"}),
+                jar: cookieJar
+            }, function(error, response) {
+                assert.equal(response.statusCode, 401);
+                done();
+            });
+        });
+        it("adds conversation to database if user is authenticated and conversation id not found", function(done) {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
+                dbCollections.users.findOne.onSecondCall().callsArgWith(1, null, testUser);
+                dbCollections.users.findOne.onThirdCall().callsArgWith(1, null, testUser2);
+                dbCollections.conversations.insertOne.callsArgWith(1, null, testConversation);
+                request.post({
+                    url: requestUrl,
+                    headers: {
+                        "Content-type": "application/json"
+                    },
+                    body: JSON.stringify({recipient: "charlie"}),
+                    jar: cookieJar
+                }, function(error, response, body) {
+                    assert(dbCollections.conversations.insertOne.calledOnce);
+                    assert.deepEqual(dbCollections.conversations.insertOne.firstCall.args[0], {
+                        _id: "bob,charlie",
+                        participants: ["bob", "charlie"]
+                    });
+                    done();
+                });
+            });
+        });
+        it("responds with status code 200 if user is authenticated and conversation is created successfully",
+            function(done) {
+                authenticateUser(testGithubUser, testUser, testToken, function() {
+                    dbCollections.users.findOne.onSecondCall().callsArgWith(1, null, testUser);
+                    dbCollections.users.findOne.onThirdCall().callsArgWith(1, null, testUser2);
+                    dbCollections.conversations.insertOne.callsArgWith(1, null, testConversation);
+                    request.post({
+                        url: requestUrl,
+                        headers: {
+                            "Content-type": "application/json"
+                        },
+                        body: JSON.stringify({recipient: "charlie"}),
+                        jar: cookieJar
+                    }, function(error, response) {
+                        assert.equal(response.statusCode, 200);
+                        done();
+                    });
+                });
+            }
+        );
+        it("responds with a body that is a JSON representation of the created conversation if conversation is " +
+            "created successfully", function(done) {
+                authenticateUser(testGithubUser, testUser, testToken, function() {
+                    dbCollections.users.findOne.onSecondCall().callsArgWith(1, null, testUser);
+                    dbCollections.users.findOne.onThirdCall().callsArgWith(1, null, testUser2);
+                    dbCollections.conversations.insertOne.callsArgWith(1, null, testConversation);
+                    request.post({
+                        url: requestUrl,
+                        headers: {
+                            "Content-type": "application/json"
+                        },
+                        body: JSON.stringify({recipient: "charlie"}),
+                        jar: cookieJar
+                    }, function(error, response, body) {
+                        assert.deepEqual(JSON.parse(body), {
+                            id: "bob,charlie",
+                            participants: ["bob", "charlie"]
+                        });
+                        done();
+                    });
+                });
+            }
+        );
+        it("creates an identical conversation ID regardless of which participant creates the conversation",
+            function(done) {
+                authenticateUser(testGithubUser2, testUser2, testToken, function() {
+                    dbCollections.users.findOne.onSecondCall().callsArgWith(1, null, testUser2);
+                    dbCollections.users.findOne.onThirdCall().callsArgWith(1, null, testUser);
+                    dbCollections.conversations.insertOne.callsArgWith(1, null, testConversation);
+                    request.post({
+                        url: requestUrl,
+                        headers: {
+                            "Content-type": "application/json"
+                        },
+                        body: JSON.stringify({recipient: "bob"}),
+                        jar: cookieJar
+                    }, function(error, response, body) {
+                        assert.equal(JSON.parse(body).id, "bob,charlie");
+                        done();
+                    });
+                });
+            }
+        );
+        it("responds with status code 500 if user is authenticated and sender does not exist", function(done) {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
+                dbCollections.users.findOne.onSecondCall().callsArgWith(1, null, null);
+                dbCollections.users.findOne.onThirdCall().callsArgWith(1, null, testUser2);
+                dbCollections.conversations.insertOne.callsArgWith(1, null, testConversation);
+                request.post({
+                    url: requestUrl,
+                    headers: {
+                        "Content-type": "application/json"
+                    },
+                    body: JSON.stringify({recipient: "charlie"}),
+                    jar: cookieJar
+                }, function(error, response) {
+                    assert.equal(response.statusCode, 500);
+                    done();
+                });
+            });
+        });
+        it("responds with status code 500 if user is authenticated and database error on find sender", function(done) {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
+                dbCollections.users.findOne.onSecondCall().callsArgWith(1, {err: "Database failure"}, null);
+                dbCollections.users.findOne.onThirdCall().callsArgWith(1, null, testUser2);
+                dbCollections.conversations.insertOne.callsArgWith(1, null, testConversation);
+                request.post({
+                    url: requestUrl,
+                    headers: {
+                        "Content-type": "application/json"
+                    },
+                    body: JSON.stringify({recipient: "charlie"}),
+                    jar: cookieJar
+                }, function(error, response) {
+                    assert.equal(response.statusCode, 500);
+                    done();
+                });
+            });
+        });
+        it("responds with status code 500 if user is authenticated and recipient does not exist", function(done) {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
+                dbCollections.users.findOne.onSecondCall().callsArgWith(1, null, testUser);
+                dbCollections.users.findOne.onThirdCall().callsArgWith(1, null, null);
+                dbCollections.conversations.insertOne.callsArgWith(1, null, testConversation);
+                request.post({
+                    url: requestUrl,
+                    headers: {
+                        "Content-type": "application/json"
+                    },
+                    body: JSON.stringify({recipient: "charlie"}),
+                    jar: cookieJar
+                }, function(error, response) {
+                    assert.equal(response.statusCode, 500);
+                    done();
+                });
+            });
+        });
+        it("responds with status code 500 if user is authenticated and database error on find " +
+            "recipient", function(done) {
+                authenticateUser(testGithubUser, testUser, testToken, function() {
+                    dbCollections.users.findOne.onSecondCall().callsArgWith(1, null, testUser);
+                    dbCollections.users.findOne.onThirdCall().callsArgWith(1, {err: "Database failure"}, null);
+                    dbCollections.conversations.insertOne.callsArgWith(1, null, testConversation);
+                    request.post({
+                        url: requestUrl,
+                        headers: {
+                            "Content-type": "application/json"
+                        },
+                        body: JSON.stringify({recipient: "charlie"}),
+                        jar: cookieJar
+                    }, function(error, response) {
+                        assert.equal(response.statusCode, 500);
+                        done();
+                    });
+                });
+            }
+        );
+        it("responds with status code 500 if user is authenticated and database error on insert", function(done) {
+            authenticateUser(testGithubUser, testUser, testToken, function() {
+                dbCollections.users.findOne.onSecondCall().callsArgWith(1, null, testUser);
+                dbCollections.users.findOne.onThirdCall().callsArgWith(1, null, testUser2);
+                dbCollections.conversations.insertOne.callsArgWith(1, {err: "Database failure"}, null);
+                request.post({
+                    url: requestUrl,
+                    headers: {
+                        "Content-type": "application/json"
+                    },
+                    body: JSON.stringify({recipient: "charlie"}),
+                    jar: cookieJar
+                }, function(error, response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
