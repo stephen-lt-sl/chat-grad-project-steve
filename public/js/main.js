@@ -6,7 +6,7 @@
         $scope.loggedIn = false;
         $scope.conversations = [];
 
-        $scope.getConversation = getConversation;
+        $scope.getConversation = openConversation;
         $scope.sendMessage = sendMessage;
 
         $http.get("/api/user").then(function(userResult) {
@@ -21,7 +21,7 @@
             });
         });
 
-        function addConversation(newConversationData) {
+        function displayConversation(newConversationData) {
             var conversationIdx = $scope.conversations.findIndex(function(conversation) {
                 return conversation.data.id === newConversationData.id;
             });
@@ -40,7 +40,7 @@
             }
         }
 
-        function getConversation(recipientID) {
+        function openConversation(recipientID) {
             console.log($scope.users);
             console.log(recipientID);
             console.log({recipient: recipientID});
@@ -48,7 +48,7 @@
             $http.get("/api/conversations/" + recipientID).then(function(conversationResult) {
                 console.log("Updating conversation with");
                 console.log(conversationResult);
-                addConversation(conversationResult.data);
+                displayConversation(conversationResult.data);
             }, function() {
                 $http({
                     method: "POST",
@@ -60,7 +60,7 @@
                 }).then(function(conversationResult) {
                     console.log("Adding new conversation with");
                     console.log(conversationResult);
-                    addConversation(conversationResult.data);
+                    displayConversation(conversationResult.data);
                 });
             });
         }
