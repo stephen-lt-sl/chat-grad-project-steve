@@ -38,10 +38,14 @@
             }
         }
 
+        // Gets the conversation with the given recipient from the server, or creates a new conversation with the
+        // recipient on the server if it does not already exist; afterwards the conversation is displayed in the client
         function openConversation(recipientID) {
             $http.get("/api/conversations/" + recipientID).then(function(conversationResult) {
+                // Conversation received from server
                 displayConversation(conversationResult.data);
             }, function() {
+                // Conversation not received, create new conversation with recipient
                 $http({
                     method: "POST",
                     url: "/api/conversations/",
