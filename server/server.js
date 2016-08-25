@@ -10,6 +10,8 @@ module.exports = function(port, db, githubAuthoriser) {
     app.use(bodyParser.json());
 
     var users = db.collection("users");
+    var conversations = db.collection("conversations");
+    var messages = db.collection("messages");
     var sessions = {};
 
     app.get("/oauth", function(req, res) {
