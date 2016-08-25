@@ -26,7 +26,6 @@
                 return conversation.data.id === newConversationData.id;
             });
             if (conversationIdx === -1) {
-                console.log("Adding new conversation with " + newConversationData.id);
                 $scope.conversations.push({
                     data: newConversationData,
                     messageEntryText: "",
@@ -34,20 +33,13 @@
                 });
                 getMessages($scope.conversations.length - 1);
             } else {
-                console.log("Updating conversation with " + newConversationData.id);
                 $scope.conversations[conversationIdx].data = newConversationData;
                 getMessages(conversationIdx);
             }
         }
 
         function openConversation(recipientID) {
-            console.log($scope.users);
-            console.log(recipientID);
-            console.log({recipient: recipientID});
-            console.log(JSON.stringify({recipient: recipientID}));
             $http.get("/api/conversations/" + recipientID).then(function(conversationResult) {
-                console.log("Updating conversation with");
-                console.log(conversationResult);
                 displayConversation(conversationResult.data);
             }, function() {
                 $http({
@@ -58,8 +50,6 @@
                     },
                     data: JSON.stringify({recipient: recipientID})
                 }).then(function(conversationResult) {
-                    console.log("Adding new conversation with");
-                    console.log(conversationResult);
                     displayConversation(conversationResult.data);
                 });
             });
@@ -67,16 +57,13 @@
 
         function getMessages(idx) {
             var conversationID = $scope.conversations[idx].data.id;
-            console.log("Getting new messages from: " + conversationID);
             $http.get("/api/messages/" + conversationID).then(function(messagesResult) {
-                console.log("Got new messages for: " + conversationID);
                 $scope.conversations[idx].messages = messagesResult.data;
             });
         }
 
         function sendMessage(idx) {
             var conversationID = $scope.conversations[idx].data.id;
-            console.log("Sending message to: " + conversationID);
             $http({
                 method: "POST",
                 url: "/api/messages",
@@ -88,7 +75,6 @@
                     conversationID: conversationID
                 })
             }).then(function(messageAddResult) {
-                console.log("Message added successfully");
                 getMessages(idx);
             });
             $scope.conversations[idx].messageEntryText = "";
