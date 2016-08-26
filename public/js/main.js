@@ -10,6 +10,27 @@
         $scope.openConversation = openConversation;
         $scope.sendMessage = sendMessage;
 
+        $scope.getUserName = getUserName;
+
+        $scope.conversationName = function(conversation) {
+            var otherParticipants = conversation.data.participants.filter(function(participant) {
+                return participant !== $scope.user._id;
+            });
+            if(otherParticipants.length > 0) {
+                return otherParticipants
+                    .map(function(participant){
+                        return $scope.getUserName(participant);
+                    })
+                    .join(", ");
+            } else {
+                return "Self";
+            }
+        };
+        $scope.timestampString = function(timestamp) {
+            var date = new Date(timestamp);
+            return "(" + new Intl.DateTimeFormat("en-US", {hour12: false, hour: "2-digit", minute: "2-digit"}).format(date) + ")";
+        };
+
         activate();
 
         function activate() {
@@ -117,6 +138,13 @@
             submitMessage(conversationID, contents).then(function(messageAddResult) {
                 refreshMessages(conversationID);
             });
+        }
+
+        function getUserName(userID) {
+            var userIdx = $scope.users.findIndex(function(user) {
+                return user.id === userID;
+            });
+            return userIdx !== -1 ? $scope.users[userIdx].name : "unknown";
         }
     });
 })();
