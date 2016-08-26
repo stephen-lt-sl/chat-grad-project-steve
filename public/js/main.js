@@ -10,17 +10,21 @@
         $scope.openConversation = openConversation;
         $scope.sendMessage = sendMessage;
 
-        $http.get("/api/user").then(function(userResult) {
-            $scope.loggedIn = true;
-            $scope.user = userResult.data;
-            $http.get("/api/users").then(function(result) {
-                $scope.users = result.data;
+        activate();
+
+        function activate() {
+            $http.get("/api/user").then(function(userResult) {
+                $scope.loggedIn = true;
+                $scope.user = userResult.data;
+                $http.get("/api/users").then(function(result) {
+                    $scope.users = result.data;
+                });
+            }).catch(function() {
+                $http.get("/api/oauth/uri").then(function(result) {
+                    $scope.loginUri = result.data.uri;
+                });
             });
-        }).catch(function() {
-            $http.get("/api/oauth/uri").then(function(result) {
-                $scope.loginUri = result.data.uri;
-            });
-        });
+        }
 
         // If the given conversation is already being displayed, updates the current version to match, otherwise adds
         // the conversation to the display list
