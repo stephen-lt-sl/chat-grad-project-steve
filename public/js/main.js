@@ -7,7 +7,7 @@
         $scope.loggedIn = false;
         $scope.conversations = [];
 
-        $scope.getConversation = openConversation;
+        $scope.openConversation = openConversation;
         $scope.sendMessage = sendMessage;
 
         $http.get("/api/user").then(function(userResult) {
@@ -16,12 +16,14 @@
             $http.get("/api/users").then(function(result) {
                 $scope.users = result.data;
             });
-        }, function() {
+        }).catch(function() {
             $http.get("/api/oauth/uri").then(function(result) {
                 $scope.loginUri = result.data.uri;
             });
         });
 
+        // If the given conversation is already being displayed, updates the current version to match, otherwise adds
+        // the conversation to the display list
         function displayConversation(newConversationData) {
             var conversationIdx = $scope.conversations.findIndex(function(conversation) {
                 return conversation.data.id === newConversationData.id;
@@ -32,18 +34,19 @@
                     messageEntryText: "",
                     messages: []
                 });
-                getMessages($scope.conversations.length - 1);
+                updateMessages(newConversationData.id);
             } else {
                 $scope.conversations[conversationIdx].data = newConversationData;
-                getMessages(conversationIdx);
+                updateMessages(newConversationData.id);
             }
         }
 
-        // Returns a promise whose "then" receives the conversation with the recipient
+        // Returns a promise whose `then` receives the conversation with the recipient, and whose `catch` receives
+        // the failed response from the server
         function setupConversation(recipientID) {
-            return $http.get("/api/conversations/" + recipientID).then(function(conversationResult) {
-                return conversationResult;
-            }, function() {
+            return $http.get("/api/conversations/" + recipientID).then(function(conversationResponse) {
+                return conversationResponse;
+            }).catch(function() {
                 // Conversation not received, create new conversation with recipient
                 return $http({
                     method: "POST",
@@ -53,8 +56,11 @@
                     },
                     data: JSON.stringify({recipient: recipientID})
                 });
-            }).then(function(conversationResult) {
-                return conversationResult.data;
+            }).then(function(conversationResponse) {
+                return conversationResponse.data;
+            }).catch(function(errorResponse) {
+                console.log("Failed to setup conversation. Server returned code " + errorResponse.status + ".");
+                return errorResponse;
             });
         }
 
@@ -66,10 +72,18 @@
             });
         }
 
-        function getMessages(idx) {
-            var conversationID = $scope.conversations[idx].data.id;
-            return $http.get("/api/messages/" + conversationID).then(function(messagesResult) {
-                $scope.conversations[idx].messages = messagesResult.data;
+        // Updates the message history for the conversation with the given ID, and returns a promise with the
+        // server response
+        function updateMessages(conversationID) {
+            return $http.get("/api/messages/" + conversationID).then(function(messageResponse) {
+                var conversationIdx = $scope.conversations.findIndex(function(conversation) {
+                    return conversation.data.id === conversationID;
+                });
+                $scope.conversations[conversationIdx].messages = messageResponse.data;
+                return messageResponse;
+            }).catch(function(errorResponse) {
+                console.log("Failed to update messages. Server returned code " + errorResponse.status + ".");
+                return errorResponse;
             });
         }
 
@@ -92,7 +106,7 @@
             var contents = $scope.conversations[idx].messageEntryText;
             $scope.conversations[idx].messageEntryText = "";
             submitMessage(conversationID, contents).then(function(messageAddResult) {
-                getMessages(idx);
+                updateMessages(conversationID);
             });
         }
     });
