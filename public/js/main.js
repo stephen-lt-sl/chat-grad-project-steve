@@ -19,6 +19,11 @@
                 $http.get("/api/users").then(function(result) {
                     $scope.users = result.data;
                 });
+                setInterval(function() {
+                    $scope.conversations.forEach(function(conversation) {
+                        updateMessages(conversation.data.id);
+                    });
+                }, 333);
             }).catch(function() {
                 $http.get("/api/oauth/uri").then(function(result) {
                     $scope.loginUri = result.data.uri;
