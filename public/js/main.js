@@ -12,6 +12,33 @@
 
         $scope.getUserName = getUserName;
 
+        $scope.conversationBoxSizes = {
+            width: 350,
+            header: 35,
+            messages: 335,
+            send: 30,
+            buttonWidth: 50,
+            totalHeight: function(){
+                return (
+                    $scope.conversationBoxSizes.header +
+                    $scope.conversationBoxSizes.messages +
+                    $scope.conversationBoxSizes.send
+                );
+            },
+            sendBoxWidth: function() {
+                return (
+                    $scope.conversationBoxSizes.width -
+                    $scope.conversationBoxSizes.buttonWidth
+                );
+            }
+        };
+        $scope.getSize = function(property) {
+            if(typeof($scope.conversationBoxSizes[property]) === "function") {
+                return $scope.conversationBoxSizes[property]() + "px";
+            }
+            return $scope.conversationBoxSizes[property] + "px";
+        };
+
         $scope.conversationName = function(conversation) {
             var otherParticipants = conversation.data.participants.filter(function(participant) {
                 return participant !== $scope.user._id;
