@@ -3,27 +3,43 @@
     <head>
         <meta charset="utf-8">
         <title>Chat</title>
+        <link href="main.css" rel="stylesheet" type="text/css">
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular.min.js"></script>
         <script src="js/main.js"></script>
     </head>
     <body ng-controller="ChatController">
         <a ng-show="!loggedIn" href="{{loginUri}}">Log in</a>
-        <section ng-show="loggedIn">
-            <p>Logged in as {{user.name}}.</p>
-            <h2>List of registered users</h2>
-            <ul>
-                <li ng-repeat="user in users">
-                    {{user.name}} - <a href="" ng-click="openConversation(user.id)">(Chat)</a>
-                </li>
-            </ul>
-            <div>
-                <div ng-repeat="(idx, conversation) in conversations track by $index" style="width:200px; height:400px; border:2px solid blue; float: left">
-                    <div ng-repeat="message in conversation.messages">
-                        {{message.contents}}
+        <section ng-show="loggedIn" style="height:500px">
+            <div class="usersSection">
+                <p>Logged in as {{user.name}}.</p>
+                <h2>List of registered users</h2>
+                <ul>
+                    <li ng-repeat="user in users">
+                        {{user.name}} - <a href="" ng-click="openConversation(user.id)">(Chat)</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="verticalDivider"></div>
+            <div class="conversationsSection">
+                <div ng-repeat="(idx, conversation) in conversations track by $index"
+                    ng-style="{width: getSize('width'), height: getSize('totalHeight')}" class="conversationBox">
+                    <div ng-style="{height: getSize('header')}" class="conversationHeader">
+                        <b>{{conversationName(conversation)}}</b>
                     </div>
-                    <form id="message-form" ng-submit="sendMessage(idx)">
-                        <input id="new-message" ng-model="conversation.messageEntryText" placeholder="New message...">
-                        <input id="send-message" type="submit" value="Send" class="button">
+                    <div ng-style="{height: getSize('messages'), 'max-height': getSize('messages')}" class="conversationMessageBox">
+                        <div style="height:5px;"></div>
+                        <div ng-repeat="message in conversation.messages" style="width:100%;">
+                            <span style="font-weight: bold;">
+                                {{getUserName(message.senderID)}}
+                                <span style="font-style: italic;">{{timestampString(message.timestamp)}}</span>:
+                            </span>
+                            <span style="">{{message.contents}}</span>
+                        </div>
+                    </div>
+                    <form ng-style="{height: getSize('send')}" id="message-form" ng-submit="sendMessage(idx)" class="conversationSendForm">
+                        <input id="new-message" ng-model="conversation.messageEntryText" placeholder="New message..."
+                            class="conversationSendFormInput" ng-style="{width: getSize('sendBoxWidth')}">
+                        <input id="send-message" type="submit" value="Send" class="button conversationSendFormButton" ng-style="{width: getSize('buttonWidth')}">
                     </form>
                 </div>
             </div>
