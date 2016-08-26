@@ -136,7 +136,9 @@
                 var conversationIdx = $scope.conversations.findIndex(function(conversation) {
                     return conversation.data.id === conversationID;
                 });
-                $scope.conversations[conversationIdx].messages = messageResponse.data;
+                if(conversationIdx !== -1) {
+                    $scope.conversations[conversationIdx].messages = messageResponse.data;
+                }
                 return messageResponse;
             }).catch(function(errorResponse) {
                 console.log("Failed to update messages. Server returned code " + errorResponse.status + ".");
