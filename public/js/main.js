@@ -69,7 +69,7 @@
                 });
                 setInterval(function() {
                     $scope.conversations.forEach(function(conversation) {
-                        updateMessages(conversation.data.id);
+                        refreshMessages(conversation.data.id);
                     });
                 }, 333);
             }).catch(function() {
@@ -175,5 +175,31 @@
             });
             return userIdx !== -1 ? $scope.users[userIdx].name : "unknown";
         }
+    });
+
+    app.directive("chatTrackingScrollBox", function() {
+        return {
+            restrict: "A",
+            scope: {
+                listenerList: "=chatTrackingScrollBox"
+            },
+            link: function(scope, element, attrs) {
+                var lastScrollHeight = element[0].scrollHeight;
+                var onUpdate = function() {
+                    if(lastScrollHeight - element[0].scrollTop === element[0].clientHeight) {
+                        element[0].scrollTop = element[0].scrollHeight - element[0].clientHeight;
+                    }
+                    lastScrollHeight = element[0].scrollHeight;
+                };
+                scope.$on("$destroy", function() {
+                    scope.listenerList = scope.listenerList.filter(function(listener) {
+                        return listener !== onUpdate;
+                    });
+                });
+                scope.$watch(function(){ return element[0].scrollHeight; }, function() {
+                    onUpdate();
+                });
+            }
+        };
     });
 })();

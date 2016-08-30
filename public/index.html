@@ -26,7 +26,7 @@
                     <div ng-style="{height: getSize('header')}" class="conversationHeader">
                         <b>{{conversationName(conversation)}}</b>
                     </div>
-                    <div ng-style="{height: getSize('messages'), 'max-height': getSize('messages')}" class="conversationMessageBox">
+                    <div ng-style="{height: getSize('messages'), 'max-height': getSize('messages')}" class="conversationMessageBox" chat-tracking-scroll-box>
                         <div style="height:5px;"></div>
                         <div ng-repeat="message in conversation.messages" style="width:100%;">
                             <span style="font-weight: bold;">
