@@ -10,17 +10,53 @@
         $scope.openConversation = openConversation;
         $scope.sendMessage = sendMessage;
 
-        $http.get("/api/user").then(function(userResult) {
-            $scope.loggedIn = true;
-            $scope.user = userResult.data;
-            $http.get("/api/users").then(function(result) {
-                $scope.users = result.data;
+        $scope.getUserName = getUserName;
+
+        $scope.conversationBoxSizes = {
+            width: 350,
+            header: 35,
+            messages: 335,
+            send: 30,
+            buttonWidth: 50,
+            totalHeight: function() {
+                return (
+                    $scope.conversationBoxSizes.header +
+                    $scope.conversationBoxSizes.messages +
+                    $scope.conversationBoxSizes.send
+                );
+            },
+            sendBoxWidth: function() {
+                return (
+                    $scope.conversationBoxSizes.width -
+                    $scope.conversationBoxSizes.buttonWidth
+                );
+            }
+        };
+
+        $scope.getSize = getSize;
+        $scope.conversationName = conversationName;
+        $scope.timestampString = timestampString;
+
+        activate();
+
+        function activate() {
+            $http.get("/api/user").then(function(userResult) {
+                $scope.loggedIn = true;
+                $scope.user = userResult.data;
+                $http.get("/api/users").then(function(result) {
+                    $scope.users = result.data;
+                });
+                setInterval(function() {
+                    $scope.conversations.forEach(function(conversation) {
+                        refreshMessages(conversation.data.id);
+                    });
+                }, 333);
+            }).catch(function() {
+                $http.get("/api/oauth/uri").then(function(result) {
+                    $scope.loginUri = result.data.uri;
+                });
             });
-        }).catch(function() {
-            $http.get("/api/oauth/uri").then(function(result) {
-                $scope.loginUri = result.data.uri;
-            });
-        });
+        }
 
         // If the given conversation is already being displayed, updates the current version to match, otherwise adds
         // the conversation to the display list
@@ -79,7 +115,9 @@
                 var conversationIdx = $scope.conversations.findIndex(function(conversation) {
                     return conversation.data.id === conversationID;
                 });
-                $scope.conversations[conversationIdx].messages = messageResponse.data;
+                if (conversationIdx !== -1) {
+                    $scope.conversations[conversationIdx].messages = messageResponse.data;
+                }
                 return messageResponse;
             }).catch(function(errorResponse) {
                 console.log("Failed to update messages. Server returned code " + errorResponse.status + ".");
@@ -109,5 +147,63 @@
                 refreshMessages(conversationID);
             });
         }
+
+        function getUserName(userID) {
+            var userIdx = $scope.users.findIndex(function(user) {
+                return user.id === userID;
+            });
+            return userIdx !== -1 ? $scope.users[userIdx].name : "unknown";
+        }
+
+        function timestampString(timestamp) {
+            var date = new Date(timestamp);
+            return "(" + new Intl.DateTimeFormat("en-US", {
+                hour12: false,
+                hour: "2-digit",
+                minute: "2-digit"
+            }).format(date) + ")";
+        }
+        function conversationName(conversation) {
+            var otherParticipants = conversation.data.participants.filter(function(participant) {
+                return participant !== $scope.user._id;
+            });
+            if (otherParticipants.length > 0) {
+                return otherParticipants
+                    .map(function(participant) {
+                        return $scope.getUserName(participant);
+                    })
+                    .join(", ");
+            } else {
+                return "Self";
+            }
+        }
+        function getSize(property) {
+            if (typeof($scope.conversationBoxSizes[property]) === "function") {
+                return $scope.conversationBoxSizes[property]() + "px";
+            }
+            return $scope.conversationBoxSizes[property] + "px";
+        }
+
+    });
+
+    app.directive("chatTrackingScrollBox", function() {
+        return {
+            restrict: "A",
+            link: function(scope, element, attrs) {
+                var lastScrollHeight = element[0].scrollHeight;
+                var onUpdate = function() {
+                    if (lastScrollHeight - element[0].scrollTop === element[0].clientHeight) {
+                        element[0].scrollTop = element[0].scrollHeight - element[0].clientHeight;
+                    }
+                    lastScrollHeight = element[0].scrollHeight;
+                };
+                var scrollListener = scope.$watch(function() { return element[0].scrollHeight; }, function() {
+                    onUpdate();
+                });
+                scope.$on("$destroy", function() {
+                    scrollListener();
+                });
+            }
+        };
     });
 })();
