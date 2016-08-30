@@ -32,35 +32,10 @@
                 );
             }
         };
-        $scope.getSize = function(property) {
-            if (typeof($scope.conversationBoxSizes[property]) === "function") {
-                return $scope.conversationBoxSizes[property]() + "px";
-            }
-            return $scope.conversationBoxSizes[property] + "px";
-        };
 
-        $scope.conversationName = function(conversation) {
-            var otherParticipants = conversation.data.participants.filter(function(participant) {
-                return participant !== $scope.user._id;
-            });
-            if (otherParticipants.length > 0) {
-                return otherParticipants
-                    .map(function(participant) {
-                        return $scope.getUserName(participant);
-                    })
-                    .join(", ");
-            } else {
-                return "Self";
-            }
-        };
-        $scope.timestampString = function(timestamp) {
-            var date = new Date(timestamp);
-            return "(" + new Intl.DateTimeFormat("en-US", {
-                hour12: false,
-                hour: "2-digit",
-                minute: "2-digit"
-            }).format(date) + ")";
-        };
+        $scope.getSize = getSize;
+        $scope.conversationName = conversationName;
+        $scope.timestampString = timestampString;
 
         activate();
 
@@ -179,6 +154,36 @@
             });
             return userIdx !== -1 ? $scope.users[userIdx].name : "unknown";
         }
+
+        function timestampString(timestamp) {
+            var date = new Date(timestamp);
+            return "(" + new Intl.DateTimeFormat("en-US", {
+                hour12: false,
+                hour: "2-digit",
+                minute: "2-digit"
+            }).format(date) + ")";
+        }
+        function conversationName(conversation) {
+            var otherParticipants = conversation.data.participants.filter(function(participant) {
+                return participant !== $scope.user._id;
+            });
+            if (otherParticipants.length > 0) {
+                return otherParticipants
+                    .map(function(participant) {
+                        return $scope.getUserName(participant);
+                    })
+                    .join(", ");
+            } else {
+                return "Self";
+            }
+        }
+        function getSize(property) {
+            if (typeof($scope.conversationBoxSizes[property]) === "function") {
+                return $scope.conversationBoxSizes[property]() + "px";
+            }
+            return $scope.conversationBoxSizes[property] + "px";
+        }
+
     });
 
     app.directive("chatTrackingScrollBox", function() {
