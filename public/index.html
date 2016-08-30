@@ -3,43 +3,46 @@
     <head>
         <meta charset="utf-8">
         <title>Chat</title>
-        <link href="main.css" rel="stylesheet" type="text/css">
+        <link href="app.css" rel="stylesheet" type="text/css">
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular.min.js"></script>
-        <script src="js/main.js"></script>
+        <script type="text/javascript" src="js/app.js"></script>
+        <script type="text/javascript" src="js/controllers/chat.controller.js"></script>
+        <script type="text/javascript" src="js/services/chatData.service.js"></script>
+        <script type="text/javascript" src="js/directives/tracking-scroll-box.directive.js"></script>
     </head>
-    <body ng-controller="ChatController">
-        <a ng-show="!loggedIn" href="{{loginUri}}">Log in</a>
-        <section ng-show="loggedIn" style="height:500px">
+    <body ng-controller="ChatController as chatVm">
+        <a ng-show="!chatVm.loggedIn" href="{{chatVm.loginUri}}">Log in</a>
+        <section ng-show="chatVm.loggedIn" style="height:500px">
             <div class="usersSection">
-                <p>Logged in as {{user.name}}.</p>
+                <p>Logged in as {{chatVm.user.name}}.</p>
                 <h2>List of registered users</h2>
                 <ul>
-                    <li ng-repeat="user in users">
-                        {{user.name}} - <a href="" ng-click="openConversation(user.id)">(Chat)</a>
+                    <li ng-repeat="user in chatVm.users">
+                        {{user.name}} - <a href="" ng-click="chatVm.openConversation(user.id)">(Chat)</a>
                     </li>
                 </ul>
             </div>
             <div class="verticalDivider"></div>
             <div class="conversationsSection">
-                <div ng-repeat="(idx, conversation) in conversations track by $index"
-                    ng-style="{width: getSize('width'), height: getSize('totalHeight')}" class="conversationBox">
-                    <div ng-style="{height: getSize('header')}" class="conversationHeader">
-                        <b>{{conversationName(conversation)}}</b>
+                <div ng-repeat="(idx, conversation) in chatVm.conversations track by $index"
+                    ng-style="{width: chatVm.getSize('width'), height: chatVm.getSize('totalHeight')}" class="conversationBox">
+                    <div ng-style="{height: chatVm.getSize('header')}" class="conversationHeader">
+                        <b>{{chatVm.conversationName(conversation)}}</b>
                     </div>
-                    <div ng-style="{height: getSize('messages'), 'max-height': getSize('messages')}" class="conversationMessageBox" chat-tracking-scroll-box>
+                    <div ng-style="{height: chatVm.getSize('messages'), 'max-height': chatVm.getSize('messages')}" class="conversationMessageBox" chat-tracking-scroll-box>
                         <div style="height:5px;"></div>
                         <div ng-repeat="message in conversation.messages" style="width:100%;">
                             <span style="font-weight: bold;">
-                                {{getUserName(message.senderID)}}
-                                <span style="font-style: italic;">{{timestampString(message.timestamp)}}</span>:
+                                {{chatVm.getUserName(message.senderID)}}
+                                <span style="font-style: italic;">{{chatVm.timestampString(message.timestamp)}}</span>:
                             </span>
                             <span style="">{{message.contents}}</span>
                         </div>
                     </div>
-                    <form ng-style="{height: getSize('send')}" id="message-form" ng-submit="sendMessage(idx)" class="conversationSendForm">
+                    <form ng-style="{height: chatVm.getSize('send')}" id="message-form" ng-submit="chatVm.sendMessage(idx)" class="conversationSendForm">
                         <input id="new-message" ng-model="conversation.messageEntryText" placeholder="New message..."
-                            class="conversationSendFormInput" ng-style="{width: getSize('sendBoxWidth')}">
-                        <input id="send-message" type="submit" value="Send" class="button conversationSendFormButton" ng-style="{width: getSize('buttonWidth')}">
+                            class="conversationSendFormInput" ng-style="{width: chatVm.getSize('sendBoxWidth')}">
+                        <input id="send-message" type="submit" value="Send" class="button conversationSendFormButton" ng-style="{width: chatVm.getSize('buttonWidth')}">
                     </form>
                 </div>
             </div>
