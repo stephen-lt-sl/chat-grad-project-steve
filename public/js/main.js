@@ -34,10 +34,10 @@
                     messageEntryText: "",
                     messages: []
                 });
-                updateMessages(newConversationData.id);
+                refreshMessages(newConversationData.id);
             } else {
                 $scope.conversations[conversationIdx].data = newConversationData;
-                updateMessages(newConversationData.id);
+                refreshMessages(newConversationData.id);
             }
         }
 
@@ -74,7 +74,7 @@
 
         // Updates the message history for the conversation with the given ID, and returns a promise with the
         // server response
-        function updateMessages(conversationID) {
+        function refreshMessages(conversationID) {
             return $http.get("/api/messages/" + conversationID).then(function(messageResponse) {
                 var conversationIdx = $scope.conversations.findIndex(function(conversation) {
                     return conversation.data.id === conversationID;
@@ -106,7 +106,7 @@
             var contents = $scope.conversations[idx].messageEntryText;
             $scope.conversations[idx].messageEntryText = "";
             submitMessage(conversationID, contents).then(function(messageAddResult) {
-                updateMessages(conversationID);
+                refreshMessages(conversationID);
             });
         }
     });
