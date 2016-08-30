@@ -18,7 +18,7 @@
             messages: 335,
             send: 30,
             buttonWidth: 50,
-            totalHeight: function(){
+            totalHeight: function() {
                 return (
                     $scope.conversationBoxSizes.header +
                     $scope.conversationBoxSizes.messages +
@@ -33,7 +33,7 @@
             }
         };
         $scope.getSize = function(property) {
-            if(typeof($scope.conversationBoxSizes[property]) === "function") {
+            if (typeof($scope.conversationBoxSizes[property]) === "function") {
                 return $scope.conversationBoxSizes[property]() + "px";
             }
             return $scope.conversationBoxSizes[property] + "px";
@@ -43,9 +43,9 @@
             var otherParticipants = conversation.data.participants.filter(function(participant) {
                 return participant !== $scope.user._id;
             });
-            if(otherParticipants.length > 0) {
+            if (otherParticipants.length > 0) {
                 return otherParticipants
-                    .map(function(participant){
+                    .map(function(participant) {
                         return $scope.getUserName(participant);
                     })
                     .join(", ");
@@ -55,7 +55,11 @@
         };
         $scope.timestampString = function(timestamp) {
             var date = new Date(timestamp);
-            return "(" + new Intl.DateTimeFormat("en-US", {hour12: false, hour: "2-digit", minute: "2-digit"}).format(date) + ")";
+            return "(" + new Intl.DateTimeFormat("en-US", {
+                hour12: false,
+                hour: "2-digit",
+                minute: "2-digit"
+            }).format(date) + ")";
         };
 
         activate();
@@ -136,7 +140,7 @@
                 var conversationIdx = $scope.conversations.findIndex(function(conversation) {
                     return conversation.data.id === conversationID;
                 });
-                if(conversationIdx !== -1) {
+                if (conversationIdx !== -1) {
                     $scope.conversations[conversationIdx].messages = messageResponse.data;
                 }
                 return messageResponse;
@@ -186,7 +190,7 @@
             link: function(scope, element, attrs) {
                 var lastScrollHeight = element[0].scrollHeight;
                 var onUpdate = function() {
-                    if(lastScrollHeight - element[0].scrollTop === element[0].clientHeight) {
+                    if (lastScrollHeight - element[0].scrollTop === element[0].clientHeight) {
                         element[0].scrollTop = element[0].scrollHeight - element[0].clientHeight;
                     }
                     lastScrollHeight = element[0].scrollHeight;
@@ -196,7 +200,7 @@
                         return listener !== onUpdate;
                     });
                 });
-                scope.$watch(function(){ return element[0].scrollHeight; }, function() {
+                scope.$watch(function() { return element[0].scrollHeight; }, function() {
                     onUpdate();
                 });
             }
