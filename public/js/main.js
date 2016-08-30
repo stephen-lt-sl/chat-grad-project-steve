@@ -184,9 +184,6 @@
     app.directive("chatTrackingScrollBox", function() {
         return {
             restrict: "A",
-            scope: {
-                listenerList: "=chatTrackingScrollBox"
-            },
             link: function(scope, element, attrs) {
                 var lastScrollHeight = element[0].scrollHeight;
                 var onUpdate = function() {
@@ -195,13 +192,11 @@
                     }
                     lastScrollHeight = element[0].scrollHeight;
                 };
-                scope.$on("$destroy", function() {
-                    scope.listenerList = scope.listenerList.filter(function(listener) {
-                        return listener !== onUpdate;
-                    });
-                });
-                scope.$watch(function() { return element[0].scrollHeight; }, function() {
+                var scrollListener = scope.$watch(function() { return element[0].scrollHeight; }, function() {
                     onUpdate();
+                });
+                scope.$on("$destroy", function() {
+                    scrollListener();
                 });
             }
         };
