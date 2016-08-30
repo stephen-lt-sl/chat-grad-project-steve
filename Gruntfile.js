@@ -55,7 +55,7 @@ module.exports = function(grunt) {
         var done = this.async();
         var cmd = process.execPath;
         process.env.DEV_MODE = true;
-        grunt.util.spawn({
+        var serveProc = grunt.util.spawn({
             cmd: cmd,
             args: ["server.js"]
         }, function(err) {
@@ -64,6 +64,8 @@ module.exports = function(grunt) {
             }
             done();
         });
+        serveProc.stdout.pipe(process.stdout);
+        serveProc.stderr.pipe(process.stderr);
     });
 
     grunt.registerMultiTask("istanbul_report", "Solo task for generating a report over multiple files.", function () {
