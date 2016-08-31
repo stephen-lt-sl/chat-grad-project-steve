@@ -117,14 +117,14 @@ module.exports = function(port, db, githubAuthoriser) {
             _id: senderID
         }).limit(1).next().then(function(sender) {
             if (!sender) {
-                Promise.reject(false);
+                return Promise.reject(false);
             }
             return users.find({
                 _id: recipientID
             }).limit(1).next();
         }).then(function(recipient) {
             if (!recipient) {
-                Promise.reject(false);
+                return Promise.reject(false);
             }
             var conversationID = getConversationID(senderID, recipientID);
             var participants = [senderID, recipientID].sort();
@@ -151,7 +151,7 @@ module.exports = function(port, db, githubAuthoriser) {
             _id: conversationID
         }).limit(1).next().then(function(conversation) {
             if (!conversation) {
-                Promise.reject(false);
+                return Promise.reject(false);
             }
             if (conversation.participants.indexOf(senderID) !== -1) {
                 var timestamp = new Date();
@@ -180,7 +180,7 @@ module.exports = function(port, db, githubAuthoriser) {
             _id: conversationID
         }).limit(1).next().then(function(conversation) {
             if (!conversation) {
-                Promise.reject(false);
+                return Promise.reject(false);
             }
             if (conversation.participants.indexOf(senderID) !== -1) {
                 messages.find({
