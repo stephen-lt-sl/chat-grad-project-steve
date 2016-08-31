@@ -1,11 +1,16 @@
 module.exports = function(grunt) {
     grunt.loadNpmTasks("grunt-contrib-jshint");
     grunt.loadNpmTasks("grunt-jscs");
+    grunt.loadNpmTasks("grunt-webpack");
     grunt.loadNpmTasks("grunt-mocha-test");
     grunt.loadNpmTasks("grunt-mocha-istanbul");
 
-    var files = ["Gruntfile.js", "server.js", "server/**/*.js", "test/**/*.js", "public/**/*.js"];
+    var files = [
+        "Gruntfile.js", "server.js", "server/**/*.js", "test/**/*.js", "public/**/*.js", "!public/build/*.js"
+    ];
     var artifactsLocation = "build_artifacts";
+
+    var webpack = require("webpack");
 
     grunt.initConfig({
         jshint: {
@@ -16,6 +21,23 @@ module.exports = function(grunt) {
         },
         jscs: {
             all: files
+        },
+        webpack: {
+            chatApp: {
+                entry: "./public/chatApp.js",
+                output: {
+                    path: "./public/build",
+                    filename: "chatApp.min.js"
+                },
+                module: {
+                    loaders: [
+                        {test: /\.css$/, loader: "style!css"}
+                    ]
+                },
+                plugins: [
+                    new webpack.optimize.UglifyJsPlugin({minimize: true})
+                ]
+            }
         },
         mochaTest: {
             test: {
@@ -86,8 +108,9 @@ module.exports = function(grunt) {
         });
     });
 
+    grunt.registerTask("build", ["webpack:chatApp"]);
     grunt.registerTask("check", ["jshint", "jscs"]);
-    grunt.registerTask("test", ["check", "mochaTest", "mocha_istanbul", "istanbul_report",
+    grunt.registerTask("test", ["check", "build", "mochaTest", "mocha_istanbul", "istanbul_report",
         "istanbul_check_coverage"]);
     grunt.registerTask("default", "test");
 };

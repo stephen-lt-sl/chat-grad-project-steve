@@ -3,12 +3,8 @@
     <head>
         <meta charset="utf-8">
         <title>Chat</title>
-        <link href="app.css" rel="stylesheet" type="text/css">
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular.min.js"></script>
-        <script type="text/javascript" src="js/app.js"></script>
-        <script type="text/javascript" src="js/controllers/chat.controller.js"></script>
-        <script type="text/javascript" src="js/services/chatData.service.js"></script>
-        <script type="text/javascript" src="js/directives/tracking-scroll-box.directive.js"></script>
+        <script type="text/javascript" src="build/chatApp.min.js"></script>
     </head>
     <body ng-controller="ChatController as chatVm">
         <a ng-show="!chatVm.loggedIn" href="{{chatVm.loginUri}}">Log in</a>
