@@ -1,3 +1,5 @@
+/*global Promise */
+
 var express = require("express");
 var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
@@ -41,8 +43,7 @@ module.exports = function(port, db, githubAuthoriser) {
                     res.header("Location", "/");
                     res.sendStatus(302);
                 });
-            }
-            else {
+            } else {
                 res.sendStatus(400);
             }
         });
@@ -99,8 +100,7 @@ module.exports = function(port, db, githubAuthoriser) {
         }).limit(1).next().then(function(conversation) {
             if (conversation) {
                 res.json(cleanIdField(conversation));
-            }
-            else {
+            } else {
                 res.sendStatus(404);
             }
         }).catch(function(err) {
@@ -117,14 +117,14 @@ module.exports = function(port, db, githubAuthoriser) {
             _id: senderID
         }).limit(1).next().then(function(sender) {
             if (!sender) {
-                throw false;
+                Promise.reject(false);
             }
             return users.find({
                 _id: recipientID
             }).limit(1).next();
         }).then(function(recipient) {
             if (!recipient) {
-                throw false;
+                Promise.reject(false);
             }
             var conversationID = getConversationID(senderID, recipientID);
             var participants = [senderID, recipientID].sort();
@@ -151,7 +151,7 @@ module.exports = function(port, db, githubAuthoriser) {
             _id: conversationID
         }).limit(1).next().then(function(conversation) {
             if (!conversation) {
-                throw false;
+                Promise.reject(false);
             }
             if (conversation.participants.indexOf(senderID) !== -1) {
                 var timestamp = new Date();
@@ -180,7 +180,7 @@ module.exports = function(port, db, githubAuthoriser) {
             _id: conversationID
         }).limit(1).next().then(function(conversation) {
             if (!conversation) {
-                throw false;
+                Promise.reject(false);
             }
             if (conversation.participants.indexOf(senderID) !== -1) {
                 messages.find({
