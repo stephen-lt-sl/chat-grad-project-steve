@@ -3,6 +3,7 @@ var server = require("../server/server");
 var request = require("request");
 var assert = require("chai").assert;
 var sinon = require("sinon");
+var helpers = require("./serverHelpers");
 
 var testPort = 52684;
 var baseUrl = "http://localhost:" + testPort;
