@@ -5,10 +5,6 @@ var assert = require("chai").assert;
 var sinon = require("sinon");
 var helpers = require("./serverHelpers");
 
-var testPort = 52684;
-var baseUrl = "http://localhost:" + testPort;
-var oauthClientId = "1234clientId";
-
 var testUser = {
     _id: "bob",
     name: "Bob Bilson",
@@ -59,63 +55,41 @@ var testObjectID = "507f1f77bcf86cd799439011";
 var testObjectID2 = "507f191e810c19729de860ea";
 
 describe("server", function() {
-    var cookieJar;
-    var db;
-    var githubAuthoriser;
-    var serverInstance;
-    var dbCollections;
-    var dbCursors;
     beforeEach(helpers.setupServer);
     afterEach(helpers.teardownServer);
-    function authenticateUser(githubUser, user, token, callback) {
-        sinon.stub(githubAuthoriser, "authorise", function(req, authCallback) {
-            authCallback(githubUser, token);
-        });
-
-        dbCursors.users.singleResult.next.returns(Promise.resolve(user));
-
-        request(baseUrl + "/oauth", function(error, response) {
-            cookieJar.setCookie(request.cookie("sessionToken=" + token), baseUrl);
-            dbCollections.users.find.reset();
-            dbCursors.users.singleResult.next.reset();
-            callback();
-        });
-    }
     describe("GET /oauth", function() {
-        var requestUrl = baseUrl + "/oauth";
-
         it("responds with status code 400 if oAuth authorise fails", function(done) {
-            var stub = sinon.stub(githubAuthoriser, "authorise", function(req, callback) {
+            helpers.setAuthenticationFunction(function(req, callback) {
                 callback(null);
             });
 
-            request(requestUrl, function(error, response) {
+            helpers.getOAuth().then(function(response) {
                 assert.equal(response.statusCode, 400);
                 done();
             });
         });
         it("responds with status code 302 if oAuth authorise succeeds", function(done) {
             var user = testGithubUser;
-            var stub = sinon.stub(githubAuthoriser, "authorise", function(req, authCallback) {
+            helpers.setAuthenticationFunction(function(req, authCallback) {
                 authCallback(user, testToken);
             });
 
-            dbCursors.users.singleResult.next.returns(Promise.resolve(testUser));
+            helpers.setFindOneResult("users", true, testUser);
 
-            request({url: requestUrl, followRedirect: false}, function(error, response) {
+            helpers.getOAuth(false).then(function(response) {
                 assert.equal(response.statusCode, 302);
                 done();
             });
         });
         it("responds with a redirect to '/' if oAuth authorise succeeds", function(done) {
             var user = testGithubUser;
-            var stub = sinon.stub(githubAuthoriser, "authorise", function(req, authCallback) {
+            helpers.setAuthenticationFunction(function(req, authCallback) {
                 authCallback(user, testToken);
             });
 
-            dbCursors.users.singleResult.next.returns(Promise.resolve(testUser));
+            helpers.setFindOneResult("users", true, testUser);
 
-            request(requestUrl, function(error, response) {
+            helpers.getOAuth().then(function(response) {
                 assert.equal(response.statusCode, 200);
                 assert.equal(response.request.uri.path, "/");
                 done();
@@ -123,16 +97,16 @@ describe("server", function() {
         });
         it("add user to database if oAuth authorise succeeds and user id not found", function(done) {
             var user = testGithubUser;
-            var stub = sinon.stub(githubAuthoriser, "authorise", function(req, authCallback) {
+            helpers.setAuthenticationFunction(function(req, authCallback) {
                 authCallback(user, testToken);
             });
 
-            dbCursors.users.singleResult.next.returns(Promise.resolve(null));
-            dbCollections.users.insertOne.returns(Promise.resolve({ops: [testUser]}));
+            helpers.setFindOneResult("users", true, null);
+            helpers.setInsertOneResult("users", true, testUser);
 
-            request(requestUrl, function(error, response) {
-                assert(dbCollections.users.insertOne.calledOnce);
-                assert.deepEqual(dbCollections.users.insertOne.firstCall.args[0], {
+            helpers.getOAuth().then(function(response) {
+                assert.equal(helpers.getInsertOneCallCount("users"), 1);
+                assert.deepEqual(helpers.getInsertOneArgs("users", 0)[0], {
                     _id: "bob",
                     name: "Bob Bilson",
                     avatarUrl: "http://avatar.url.com/u=test"
@@ -142,49 +116,47 @@ describe("server", function() {
         });
     });
     describe("GET /api/oauth/uri", function() {
-        var requestUrl = baseUrl + "/api/oauth/uri";
         it("responds with status code 200", function(done) {
-            request(requestUrl, function(error, response) {
+            helpers.getOAuthUri().then(function(response) {
                 assert.equal(response.statusCode, 200);
                 done();
             });
         });
         it("responds with a body encoded as JSON in UTF-8", function(done) {
-            request(requestUrl, function(error, response) {
+            helpers.getOAuthUri().then(function(response) {
                 assert.equal(response.headers["content-type"], "application/json; charset=utf-8");
                 done();
             });
         });
         it("responds with a body that is a JSON object containing a URI to GitHub with a client id", function(done) {
-            request(requestUrl, function(error, response, body) {
-                assert.deepEqual(JSON.parse(body), {
-                    uri: "https://github.com/login/oauth/authorize?client_id=" + oauthClientId
+            helpers.getOAuthUri().then(function(response) {
+                assert.deepEqual(JSON.parse(response.body), {
+                    uri: helpers.getOAuthUriString()
                 });
                 done();
             });
         });
     });
     describe("GET /api/user", function() {
-        var requestUrl = baseUrl + "/api/user";
         it("responds with status code 401 if user not authenticated", function(done) {
-            request(requestUrl, function(error, response) {
+            helpers.getUser().then(function(response) {
                 assert.equal(response.statusCode, 401);
                 done();
             });
         });
         it("responds with status code 401 if user has an unrecognised session token", function(done) {
-            cookieJar.setCookie(request.cookie("sessionToken=" + testExpiredToken), baseUrl);
-            request({url: requestUrl, jar: cookieJar}, function(error, response) {
+            helpers.setSessionToken(testExpiredToken);
+            helpers.getUser().then(function(response) {
                 assert.equal(response.statusCode, 401);
                 done();
             });
         });
         it("attempts to find user with correct ID if user is authenticated", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.users.singleResult.next.returns(Promise.resolve(testUser));
-                request({url: requestUrl, jar: cookieJar}, function(error, response) {
-                    assert(dbCollections.users.find.calledOnce);
-                    assert.deepEqual(dbCollections.users.find.firstCall.args[0], {
+                helpers.setFindOneResult("users", true, testUser);
+                helpers.getUser().then(function(response) {
+                    assert.equal(helpers.getFindOneCallCount("users"), 1);
+                    assert.deepEqual(helpers.getFindAnyArgs("users", 0)[0], {
                         _id: "bob"
                     });
                     done();
@@ -193,8 +165,8 @@ describe("server", function() {
         });
         it("responds with status code 200 if user is authenticated", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.users.singleResult.next.returns(Promise.resolve(testUser));
-                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                helpers.setFindOneResult("users", true, testUser);
+                helpers.getUser().then(function(response) {
                     assert.equal(response.statusCode, 200);
                     done();
                 });
@@ -202,9 +174,9 @@ describe("server", function() {
         });
         it("responds with a body that is a JSON representation of the user if user is authenticated", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.users.singleResult.next.returns(Promise.resolve(testUser));
-                request({url: requestUrl, jar: cookieJar}, function(error, response, body) {
-                    assert.deepEqual(JSON.parse(body), {
+                helpers.setFindOneResult("users", true, testUser);
+                helpers.getUser().then(function(response) {
+                    assert.deepEqual(JSON.parse(response.body), {
                         _id: "bob",
                         name: "Bob Bilson",
                         avatarUrl: "http://avatar.url.com/u=test"
@@ -215,10 +187,8 @@ describe("server", function() {
         });
         it("responds with status code 500 if database error", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-
-                dbCursors.users.singleResult.next.returns(Promise.reject({err: "Database error"}));
-
-                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                helpers.setFindOneResult("users", false, {err: "Database failure"});
+                helpers.getUser().then(function(response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
@@ -226,25 +196,23 @@ describe("server", function() {
         });
     });
     describe("GET /api/users", function() {
-        var requestUrl = baseUrl + "/api/users";
         it("responds with status code 401 if user not authenticated", function(done) {
-            request(requestUrl, function(error, response) {
+            helpers.getUsers().then(function(response) {
                 assert.equal(response.statusCode, 401);
                 done();
             });
         });
         it("responds with status code 401 if user has an unrecognised session token", function(done) {
-            cookieJar.setCookie(request.cookie("sessionToken=" + testExpiredToken), baseUrl);
-            request({url: requestUrl, jar: cookieJar}, function(error, response) {
+            helpers.setSessionToken(testExpiredToken);
+            helpers.getUsers().then(function(response) {
                 assert.equal(response.statusCode, 401);
                 done();
             });
         });
         it("responds with status code 200 if user is authenticated", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.users.toArray.returns(Promise.resolve([testUser]));
-
-                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                helpers.setFindResult("users", true, [testUser]);
+                helpers.getUsers().then(function(response) {
                     assert.equal(response.statusCode, 200);
                     done();
                 });
@@ -252,10 +220,9 @@ describe("server", function() {
         });
         it("responds with a body that is a JSON representation of the user if user is authenticated", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.users.toArray.returns(Promise.resolve([testUser, testUser2]));
-
-                request({url: requestUrl, jar: cookieJar}, function(error, response, body) {
-                    assert.deepEqual(JSON.parse(body), [
+                helpers.setFindResult("users", true, [testUser, testUser2]);
+                helpers.getUsers().then(function(response) {
+                    assert.deepEqual(JSON.parse(response.body), [
                         {
                             id: "bob",
                             name: "Bob Bilson",
@@ -273,9 +240,8 @@ describe("server", function() {
         });
         it("responds with status code 500 if database error", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.users.toArray.returns(Promise.reject({err: "Database failure"}));
-
-                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                helpers.setFindResult("users", false, {err: "Database failure"});
+                helpers.getUsers().then(function(response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
@@ -283,26 +249,25 @@ describe("server", function() {
         });
     });
     describe("GET /api/conversations/:id", function() {
-        var requestUrl = baseUrl + "/api/conversations/" + testUser2._id;
         it("responds with status code 401 if user not authenticated", function(done) {
-            request(requestUrl, function(error, response) {
+            helpers.getConversation(testUser2._id).then(function(response) {
                 assert.equal(response.statusCode, 401);
                 done();
             });
         });
         it("responds with status code 401 if user has an unrecognised session token", function(done) {
-            cookieJar.setCookie(request.cookie("sessionToken=" + testExpiredToken), baseUrl);
-            request({url: requestUrl, jar: cookieJar}, function(error, response) {
+            helpers.setSessionToken(testExpiredToken);
+            helpers.getConversation(testUser2._id).then(function(response) {
                 assert.equal(response.statusCode, 401);
                 done();
             });
         });
         it("attempts to find conversation with correct ID if user is authenticated", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation));
-                request({url: requestUrl, jar: cookieJar}, function(error, response) {
-                    assert(dbCollections.conversations.find.calledOnce);
-                    assert.deepEqual(dbCollections.conversations.find.firstCall.args[0], {
+                helpers.setFindOneResult("conversations", true, testConversation);
+                helpers.getConversation(testUser2._id).then(function(response) {
+                    assert.equal(helpers.getFindOneCallCount("conversations"), 1);
+                    assert.deepEqual(helpers.getFindAnyArgs("conversations", 0)[0], {
                         _id: "bob,charlie"
                     });
                     done();
@@ -311,8 +276,8 @@ describe("server", function() {
         });
         it("responds with status code 200 if user is authenticated and conversation exists", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation));
-                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                helpers.setFindOneResult("conversations", true, testConversation);
+                helpers.getConversation(testUser2._id).then(function(response) {
                     assert.equal(response.statusCode, 200);
                     done();
                 });
@@ -321,9 +286,9 @@ describe("server", function() {
         it("responds with a body that is a JSON representation of the conversation if user is authenticated " +
             "and conversation exists", function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation));
-                    request({url: requestUrl, jar: cookieJar}, function(error, response, body) {
-                        assert.deepEqual(JSON.parse(body), {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.getConversation(testUser2._id).then(function(response) {
+                        assert.deepEqual(JSON.parse(response.body), {
                                 id: "bob,charlie",
                                 participants: ["bob", "charlie"]
                             });
@@ -334,8 +299,8 @@ describe("server", function() {
         );
         it("responds with status code 404 if user is authenticated and conversation does not exist", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.conversations.singleResult.next.returns(Promise.resolve(null));
-                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                helpers.setFindOneResult("conversations", true, null);
+                helpers.getConversation(testUser2._id).then(function(response) {
                     assert.equal(response.statusCode, 404);
                     done();
                 });
@@ -343,8 +308,8 @@ describe("server", function() {
         });
         it("responds with status code 500 if database error", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.conversations.singleResult.next.returns(Promise.reject({err: "Database failure"}));
-                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                helpers.setFindOneResult("conversations", false, {err: "Database failure"});
+                helpers.getConversation(testUser2._id).then(function(response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
@@ -352,48 +317,27 @@ describe("server", function() {
         });
     });
     describe("POST /api/conversations", function() {
-        var requestUrl = baseUrl + "/api/conversations";
         it("responds with status code 401 if user not authenticated", function(done) {
-            request.post({
-                url: requestUrl,
-                headers: {
-                    "Content-type": "application/json"
-                },
-                body: JSON.stringify({recipient: "charlie"})
-            }, function(error, response) {
+            helpers.postConversation(testUser2._id).then(function(response) {
                 assert.equal(response.statusCode, 401);
                 done();
             });
         });
         it("responds with status code 401 if user has an unrecognised session token", function(done) {
-            cookieJar.setCookie(request.cookie("sessionToken=" + testExpiredToken), baseUrl);
-            request.post({
-                url: requestUrl,
-                headers: {
-                    "Content-type": "application/json"
-                },
-                body: JSON.stringify({recipient: "charlie"}),
-                jar: cookieJar
-            }, function(error, response) {
+            helpers.setSessionToken(testExpiredToken);
+            helpers.postConversation(testUser2._id).then(function(response) {
                 assert.equal(response.statusCode, 401);
                 done();
             });
         });
-        it("adds conversation to database if user is authenticated and conversation id not found", function(done) {
+        it("adds conversation to database if user is authenticated", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.users.singleResult.next.onFirstCall().returns(Promise.resolve(testUser));
-                dbCursors.users.singleResult.next.onSecondCall().returns(Promise.resolve(testUser2));
-                dbCollections.conversations.insertOne.returns(Promise.resolve({ops: [testConversation]}));
-                request.post({
-                    url: requestUrl,
-                    headers: {
-                        "Content-type": "application/json"
-                    },
-                    body: JSON.stringify({recipient: "charlie"}),
-                    jar: cookieJar
-                }, function(error, response, body) {
-                    assert(dbCollections.conversations.insertOne.calledOnce);
-                    assert.deepEqual(dbCollections.conversations.insertOne.firstCall.args[0], {
+                helpers.setFindOneResult("users", true, testUser, 0);
+                helpers.setFindOneResult("users", true, testUser2, 1);
+                helpers.setInsertOneResult("conversations", true, testConversation);
+                helpers.postConversation(testUser2._id).then(function(response) {
+                    assert.equal(helpers.getInsertOneCallCount("conversations"), 1);
+                    assert.deepEqual(helpers.getInsertOneArgs("conversations", 0)[0], {
                         _id: "bob,charlie",
                         participants: ["bob", "charlie"]
                     });
@@ -404,17 +348,10 @@ describe("server", function() {
         it("responds with status code 200 if user is authenticated and conversation is created successfully",
             function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.users.singleResult.next.onFirstCall().returns(Promise.resolve(testUser));
-                    dbCursors.users.singleResult.next.onSecondCall().returns(Promise.resolve(testUser2));
-                    dbCollections.conversations.insertOne.returns(Promise.resolve({ops: [testConversation]}));
-                    request.post({
-                        url: requestUrl,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({recipient: "charlie"}),
-                        jar: cookieJar
-                    }, function(error, response) {
+                    helpers.setFindOneResult("users", true, testUser, 0);
+                    helpers.setFindOneResult("users", true, testUser2, 1);
+                    helpers.setInsertOneResult("conversations", true, testConversation);
+                    helpers.postConversation(testUser2._id).then(function(response) {
                         assert.equal(response.statusCode, 200);
                         done();
                     });
@@ -424,18 +361,11 @@ describe("server", function() {
         it("responds with a body that is a JSON representation of the created conversation if conversation is " +
             "created successfully", function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.users.singleResult.next.onFirstCall().returns(Promise.resolve(testUser));
-                    dbCursors.users.singleResult.next.onSecondCall().returns(Promise.resolve(testUser2));
-                    dbCollections.conversations.insertOne.returns(Promise.resolve({ops: [testConversation]}));
-                    request.post({
-                        url: requestUrl,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({recipient: "charlie"}),
-                        jar: cookieJar
-                    }, function(error, response, body) {
-                        assert.deepEqual(JSON.parse(body), {
+                    helpers.setFindOneResult("users", true, testUser, 0);
+                    helpers.setFindOneResult("users", true, testUser2, 1);
+                    helpers.setInsertOneResult("conversations", true, testConversation);
+                    helpers.postConversation(testUser2._id).then(function(response) {
+                        assert.deepEqual(JSON.parse(response.body), {
                             id: "bob,charlie",
                             participants: ["bob", "charlie"]
                         });
@@ -446,19 +376,12 @@ describe("server", function() {
         );
         it("creates an identical conversation ID regardless of which participant creates the conversation",
             function(done) {
-                authenticateUser(testGithubUser2, testUser2, testToken, function() {
-                    dbCursors.users.singleResult.next.onFirstCall().returns(Promise.resolve(testUser2));
-                    dbCursors.users.singleResult.next.onSecondCall().returns(Promise.resolve(testUser));
-                    dbCollections.conversations.insertOne.returns(Promise.resolve({ops: [testConversation]}));
-                    request.post({
-                        url: requestUrl,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({recipient: "bob"}),
-                        jar: cookieJar
-                    }, function(error, response, body) {
-                        assert.equal(JSON.parse(body).id, "bob,charlie");
+                helpers.authenticateUser(testGithubUser2, testUser2, testToken).then(function() {
+                    helpers.setFindOneResult("users", true, testUser2, 0);
+                    helpers.setFindOneResult("users", true, testUser, 1);
+                    helpers.setInsertOneResult("conversations", true, testConversation);
+                    helpers.postConversation(testUser2._id).then(function(response) {
+                        assert.equal(JSON.parse(response.body).id, "bob,charlie");
                         done();
                     });
                 });
@@ -466,17 +389,10 @@ describe("server", function() {
         );
         it("responds with status code 500 if user is authenticated and sender does not exist", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.users.singleResult.next.onFirstCall().returns(Promise.resolve(null));
-                dbCursors.users.singleResult.next.onSecondCall().returns(Promise.resolve(testUser2));
-                dbCollections.conversations.insertOne.returns(Promise.resolve({ops: [testConversation]}));
-                request.post({
-                    url: requestUrl,
-                    headers: {
-                        "Content-type": "application/json"
-                    },
-                    body: JSON.stringify({recipient: "charlie"}),
-                    jar: cookieJar
-                }, function(error, response) {
+                helpers.setFindOneResult("users", true, null, 0);
+                helpers.setFindOneResult("users", true, testUser2, 1);
+                helpers.setInsertOneResult("conversations", true, testConversation);
+                helpers.postConversation(testUser2._id).then(function(response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
@@ -484,17 +400,10 @@ describe("server", function() {
         });
         it("responds with status code 500 if user is authenticated and database error on find sender", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.users.singleResult.next.onFirstCall().returns(Promise.reject({err: "Database failure"}));
-                dbCursors.users.singleResult.next.onSecondCall().returns(Promise.resolve(testUser2));
-                dbCollections.conversations.insertOne.returns(Promise.resolve({ops: [testConversation]}));
-                request.post({
-                    url: requestUrl,
-                    headers: {
-                        "Content-type": "application/json"
-                    },
-                    body: JSON.stringify({recipient: "charlie"}),
-                    jar: cookieJar
-                }, function(error, response) {
+                helpers.setFindOneResult("users", false, {err: "Database failure"}, 0);
+                helpers.setFindOneResult("users", true, testUser2, 1);
+                helpers.setInsertOneResult("conversations", true, testConversation);
+                helpers.postConversation(testUser2._id).then(function(response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
@@ -502,17 +411,10 @@ describe("server", function() {
         });
         it("responds with status code 500 if user is authenticated and recipient does not exist", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.users.singleResult.next.onFirstCall().returns(Promise.resolve(testUser));
-                dbCursors.users.singleResult.next.onSecondCall().returns(Promise.resolve(null));
-                dbCollections.conversations.insertOne.returns(Promise.resolve({ops: [testConversation]}));
-                request.post({
-                    url: requestUrl,
-                    headers: {
-                        "Content-type": "application/json"
-                    },
-                    body: JSON.stringify({recipient: "charlie"}),
-                    jar: cookieJar
-                }, function(error, response) {
+                helpers.setFindOneResult("users", true, testUser, 0);
+                helpers.setFindOneResult("users", true, null, 1);
+                helpers.setInsertOneResult("conversations", true, testConversation);
+                helpers.postConversation(testUser2._id).then(function(response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
@@ -521,17 +423,10 @@ describe("server", function() {
         it("responds with status code 500 if user is authenticated and database error on find " +
             "recipient", function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.users.singleResult.next.onFirstCall().returns(Promise.resolve(testUser));
-                    dbCursors.users.singleResult.next.onSecondCall().returns(Promise.reject({err: "Database failure"}));
-                    dbCollections.conversations.insertOne.returns(Promise.resolve({ops: [testConversation]}));
-                    request.post({
-                        url: requestUrl,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({recipient: "charlie"}),
-                        jar: cookieJar
-                    }, function(error, response) {
+                    helpers.setFindOneResult("users", true, testUser, 0);
+                    helpers.setFindOneResult("users", false, {err: "Database failure"}, 1);
+                    helpers.setInsertOneResult("conversations", true, testConversation);
+                    helpers.postConversation(testUser2._id).then(function(response) {
                         assert.equal(response.statusCode, 500);
                         done();
                     });
@@ -540,17 +435,10 @@ describe("server", function() {
         );
         it("responds with status code 500 if user is authenticated and database error on insert", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.users.singleResult.next.onFirstCall().returns(Promise.resolve(testUser));
-                dbCursors.users.singleResult.next.onSecondCall().returns(Promise.resolve(testUser2));
-                dbCollections.conversations.insertOne.returns(Promise.reject({err: "Database failure"}));
-                request.post({
-                    url: requestUrl,
-                    headers: {
-                        "Content-type": "application/json"
-                    },
-                    body: JSON.stringify({recipient: "charlie"}),
-                    jar: cookieJar
-                }, function(error, response) {
+                helpers.setFindOneResult("users", true, testUser, 0);
+                helpers.setFindOneResult("users", true, testUser2, 1);
+                helpers.setInsertOneResult("conversations", false, {err: "Database failure"});
+                helpers.postConversation(testUser2._id).then(function(response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
@@ -558,54 +446,15 @@ describe("server", function() {
         });
     });
     describe("POST /api/messages", function() {
-        var requestUrl = baseUrl + "/api/messages";
-        beforeEach(function() {
-            // Proxy function that calls a stub with the original argument given to it, and returns a promise which
-            // returns either the original object with an added _id: <ObjectID> field wrapped in a `InsertOneResult`
-            // object (mimicking the action of the actual database) if the stub returns a promise that resolves to
-            // true, or null if the stub returns a promise that resolves to false
-            // This is necessary to preserve server output that shouldn't be mocked i.e. timestamps, so that the
-            // server receives correct input data when resolving the insertion
-            dbCollections.messages.insertOne = function(obj) {
-                var dbObj = obj;
-                dbObj._id = testMessage._id;
-                return dbCollections.messages.insertOne.stub(obj).then(function(found) {
-                    return found ? {ops: [dbObj]} : null;
-                });
-            };
-            // Use the .stub field for all usual stub operations, e.g. calledOnce, firstCall, etc, keeping in mind
-            // that it must return a promise that either rejects to signify an error, or resolves to true or false to
-            // determine whether the server receives a result from the operation or not (see above)
-            dbCollections.messages.insertOne.stub = sinon.stub();
-        });
         it("responds with status code 401 if user not authenticated", function(done) {
-            request.post({
-                url: requestUrl,
-                headers: {
-                    "Content-type": "application/json"
-                },
-                body: JSON.stringify({
-                    conversationID: testMessage.conversationID,
-                    contents: testMessage.contents
-                })
-            }, function(error, response) {
+            helpers.postMessage(testMessage.conversationID, testMessage.contents).then(function(response) {
                 assert.equal(response.statusCode, 401);
                 done();
             });
         });
         it("responds with status code 401 if user has an unrecognised session token", function(done) {
-            cookieJar.setCookie(request.cookie("sessionToken=" + testExpiredToken), baseUrl);
-            request.post({
-                url: requestUrl,
-                headers: {
-                    "Content-type": "application/json"
-                },
-                body: JSON.stringify({
-                    conversationID: testMessage.conversationID,
-                    contents: testMessage.contents
-                }),
-                jar: cookieJar
-            }, function(error, response) {
+            helpers.setSessionToken(testExpiredToken);
+            helpers.postMessage(testMessage.conversationID, testMessage.contents).then(function(response) {
                 assert.equal(response.statusCode, 401);
                 done();
             });
@@ -613,23 +462,13 @@ describe("server", function() {
         it("adds message with correct ID, contents, and valid timestamp to database if user is authenticated, " +
             "conversation exists, and sender is a participant", function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation));
-                    dbCollections.messages.insertOne.stub.returns(Promise.resolve(true));
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", true, testMessage);
                     var beforeTimestamp = new Date();
-                    request.post({
-                        url: requestUrl,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            conversationID: testMessage.conversationID,
-                            contents: testMessage.contents
-                        }),
-                        jar: cookieJar
-                    }, function(error, response, body) {
+                    helpers.postMessage(testMessage.conversationID, testMessage.contents).then(function(response) {
                         var afterTimestamp = new Date();
-                        assert(dbCollections.messages.insertOne.stub.calledOnce, "insertOne not called");
-                        var insertedMessage = dbCollections.messages.insertOne.stub.firstCall.args[0];
+                        assert.equal(helpers.getInsertOneCallCount("messages"), 1);
+                        var insertedMessage = helpers.getInsertOneArgs("messages", 0)[0];
                         assert.equal(insertedMessage.conversationID, testConversation._id);
                         assert.equal(insertedMessage.contents, testMessage.contents);
                         assert(beforeTimestamp.getTime() <= insertedMessage.timestamp.getTime(),
@@ -646,20 +485,11 @@ describe("server", function() {
         it("responds with status code 201 and creates no message if user is authenticated and message is blank",
             function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation));
-                    dbCollections.messages.insertOne.stub.returns(Promise.resolve(true));
-                    request.post({
-                        url: requestUrl,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            contents: ""
-                        }),
-                        jar: cookieJar
-                    }, function(error, response) {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.postMessage(testMessage.conversationID, "").then(function(response) {
                         assert.equal(response.statusCode, 201);
-                        assert.isFalse(dbCollections.messages.insertOne.stub.called);
+                        assert.equal(helpers.getInsertOneCallCount("messages"), 0);
                         done();
                     });
                 });
@@ -668,19 +498,9 @@ describe("server", function() {
         it("responds with status code 200 if user is authenticated, conversation exists, sender is a participant, " +
             "and message is created successfully", function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation));
-                    dbCollections.messages.insertOne.stub.returns(Promise.resolve(true));
-                    request.post({
-                        url: requestUrl,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            conversationID: testMessage.conversationID,
-                            contents: testMessage.contents
-                        }),
-                        jar: cookieJar
-                    }, function(error, response) {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.postMessage(testMessage.conversationID, testMessage.contents).then(function(response) {
                         assert.equal(response.statusCode, 200);
                         done();
                     });
@@ -690,31 +510,14 @@ describe("server", function() {
         it("responds with a body that is a JSON representation of the created message if message is " +
             "created successfully", function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation));
-                    dbCollections.messages.insertOne.stub.returns(Promise.resolve(true));
-                    var beforeTimestamp = new Date();
-                    request.post({
-                        url: requestUrl,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            conversationID: testMessage.conversationID,
-                            contents: testMessage.contents
-                        }),
-                        jar: cookieJar
-                    }, function(error, response, body) {
-                        var afterTimestamp = new Date();
-                        var receivedMessage = JSON.parse(body);
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.postMessage(testMessage.conversationID, testMessage.contents).then(function(response) {
+                        var receivedMessage = JSON.parse(response.body);
                         var receivedTimestamp = new Date(receivedMessage.timestamp);
                         assert.equal(receivedMessage.conversationID, testConversation._id);
                         assert.equal(receivedMessage.contents, testMessage.contents);
-                        assert(beforeTimestamp.getTime() <= receivedTimestamp.getTime(),
-                            "Timestamp is earlier than call"
-                        );
-                        assert(receivedTimestamp.getTime() <= afterTimestamp.getTime(),
-                            "Timestamp is later than call"
-                        );
+                        assert.equal(receivedTimestamp.getTime(), testMessage.timestamp.getTime());
                         done();
                     });
                 });
@@ -722,19 +525,9 @@ describe("server", function() {
         );
         it("responds with status code 500 if user is authenticated and conversation does not exist", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.conversations.singleResult.next.returns(Promise.resolve(null));
-                dbCollections.messages.insertOne.stub.returns(Promise.resolve(true));
-                request.post({
-                    url: requestUrl,
-                    headers: {
-                        "Content-type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        conversationID: testMessage.conversationID,
-                        contents: testMessage.contents
-                    }),
-                    jar: cookieJar
-                }, function(error, response) {
+                helpers.setFindOneResult("conversations", true, null);
+                helpers.setInsertOneResult("messages", true, testMessage);
+                helpers.postMessage(testMessage.conversationID, testMessage.contents).then(function(response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
@@ -743,19 +536,9 @@ describe("server", function() {
         it("responds with status code 500 if user is authenticated and database error on find conversation",
             function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.conversations.singleResult.next.returns(Promise.reject({err: "Database failure"}));
-                    dbCollections.messages.insertOne.stub.returns(Promise.resolve(true));
-                    request.post({
-                        url: requestUrl,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            conversationID: testMessage.conversationID,
-                            contents: testMessage.contents
-                        }),
-                        jar: cookieJar
-                    }, function(error, response) {
+                    helpers.setFindOneResult("conversations", false, {err: "Database failure"});
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.postMessage(testMessage.conversationID, testMessage.contents).then(function(response) {
                         assert.equal(response.statusCode, 500);
                         done();
                     });
@@ -765,19 +548,9 @@ describe("server", function() {
         it("responds with status code 403 if user is authenticated and conversation exists but user is not " +
             "participant in conversation", function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation2));
-                    dbCollections.messages.insertOne.stub.returns(Promise.resolve(true));
-                    request.post({
-                        url: requestUrl,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            conversationID: testConversation2.id,
-                            contents: testMessage.contents
-                        }),
-                        jar: cookieJar
-                    }, function(error, response) {
+                    helpers.setFindOneResult("conversations", true, testConversation2);
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.postMessage(testConversation2._id, testMessage.contents).then(function(response) {
                         assert.equal(response.statusCode, 403);
                         done();
                     });
@@ -787,19 +560,9 @@ describe("server", function() {
         it("responds with status code 500 if user is authenticated and database error on insert " +
             "message", function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation));
-                    dbCollections.messages.insertOne.stub.returns(Promise.reject({err: "Database failure"}));
-                    request.post({
-                        url: requestUrl,
-                        headers: {
-                            "Content-type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            conversationID: testMessage.conversationID,
-                            contents: testMessage.contents
-                        }),
-                        jar: cookieJar
-                    }, function(error, response) {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", false, {err: "Database failure"});
+                    helpers.postMessage(testMessage.conversationID, testMessage.contents).then(function(response) {
                         assert.equal(response.statusCode, 500);
                         done();
                     });
@@ -808,17 +571,15 @@ describe("server", function() {
         );
     });
     describe("GET /api/messages", function() {
-        var requestUrl = baseUrl + "/api/messages/" + testConversation._id;
-        var requestUrl2 = baseUrl + "/api/messages/" + testConversation2._id;
         it("responds with status code 401 if user not authenticated", function(done) {
-            request(requestUrl, function(error, response) {
+            helpers.getMessages(testConversation._id).then(function(response) {
                 assert.equal(response.statusCode, 401);
                 done();
             });
         });
         it("responds with status code 401 if user has an unrecognised session token", function(done) {
-            cookieJar.setCookie(request.cookie("sessionToken=" + testExpiredToken), baseUrl);
-            request({url: requestUrl, jar: cookieJar}, function(error, response) {
+            helpers.setSessionToken(testExpiredToken);
+            helpers.getMessages(testConversation._id).then(function(response) {
                 assert.equal(response.statusCode, 401);
                 done();
             });
@@ -826,15 +587,15 @@ describe("server", function() {
         it("makes database requests with the conversation ID sent in the request body",
             function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation));
-                    dbCursors.messages.toArray.returns(Promise.resolve([testMessage, testMessage2]));
-                    request({url: requestUrl, jar: cookieJar}, function(error, response) {
-                        assert(dbCollections.conversations.find.calledOnce);
-                        assert.deepEqual(dbCollections.conversations.find.firstCall.args[0], {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                    helpers.getMessages(testConversation._id).then(function(response) {
+                        assert.equal(helpers.getFindOneCallCount("conversations"), 1);
+                        assert.deepEqual(helpers.getFindAnyArgs("conversations", 0)[0], {
                             _id: testConversation._id
                         });
-                        assert(dbCollections.messages.find.calledOnce);
-                        assert.deepEqual(dbCollections.messages.find.firstCall.args[0], {
+                        assert.equal(helpers.getFindCallCount("messages"), 1);
+                        assert.deepEqual(helpers.getFindAnyArgs("messages", 0)[0], {
                             conversationID: testConversation._id
                         });
                         done();
@@ -845,9 +606,9 @@ describe("server", function() {
         it("responds with status code 200 if user is authenticated, conversation exists, and user is a participant",
             function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation));
-                    dbCursors.messages.toArray.returns(Promise.resolve([testMessage, testMessage2]));
-                    request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                    helpers.getMessages(testConversation._id).then(function(response) {
                         assert.equal(response.statusCode, 200);
                         done();
                     });
@@ -857,9 +618,9 @@ describe("server", function() {
         it("responds with a body that is a JSON representation of the messages in the conversation if user is " +
             "authenticated, conversation exists, and user is a participant", function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation));
-                    dbCursors.messages.toArray.returns(Promise.resolve([testMessage, testMessage2]));
-                    request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                    helpers.getMessages(testConversation._id).then(function(response) {
                         assert.deepEqual(JSON.parse(response.body), [
                             {
                                 id: "507f1f77bcf86cd799439011",
@@ -883,9 +644,9 @@ describe("server", function() {
         );
         it("responds with status code 500 if database error on find messages", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation));
-                dbCursors.messages.toArray.returns(Promise.reject({err: "Database failure"}));
-                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                helpers.setFindOneResult("conversations", true, testConversation);
+                helpers.setFindResult("messages", false, {err: "Database failure"});
+                helpers.getMessages(testConversation._id).then(function(response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
@@ -894,9 +655,9 @@ describe("server", function() {
         it("responds with status code 403 if user is authenticated and conversation exists, but user is not a " +
             "participant", function(done) {
                 helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    dbCursors.conversations.singleResult.next.returns(Promise.resolve(testConversation2));
-                    dbCursors.messages.toArray.returns(Promise.resolve([testMessage, testMessage2]));
-                    request({url: requestUrl2, jar: cookieJar}, function(error, response) {
+                    helpers.setFindOneResult("conversations", true, testConversation2);
+                    helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                    helpers.getMessages(testConversation2._id).then(function(response) {
                         assert.equal(response.statusCode, 403);
                         done();
                     });
@@ -905,19 +666,19 @@ describe("server", function() {
         );
         it("responds with status code 500 if user is authenticated but conversation does not exist", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.conversations.singleResult.next.returns(Promise.resolve(null));
-                dbCursors.messages.toArray.returns(Promise.resolve([testMessage, testMessage2]));
-                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                helpers.setFindOneResult("conversations", true, null);
+                helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                helpers.getMessages(testConversation._id).then(function(response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
             });
         });
-        it("responds with status code 500 if user is authenticated but conversation does not exist", function(done) {
+        it("responds with status code 500 if database error on find conversation", function(done) {
             helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                dbCursors.conversations.singleResult.next.returns(Promise.reject({err: "Database failure"}));
-                dbCursors.messages.toArray.returns(Promise.resolve([testMessage, testMessage2]));
-                request({url: requestUrl, jar: cookieJar}, function(error, response) {
+                helpers.setFindOneResult("conversations", false, {err: "Database failure"});
+                helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                helpers.getMessages(testConversation._id).then(function(response) {
                     assert.equal(response.statusCode, 500);
                     done();
                 });
