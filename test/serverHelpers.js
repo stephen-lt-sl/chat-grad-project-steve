@@ -71,8 +71,16 @@ function setupAuthentication() {
     };
 }
 
+module.exports.getOAuthUriString = function() {
+    return "https://github.com/login/oauth/authorize?client_id=" + oauthClientId;
+};
+
 module.exports.setAuthenticationFunction = function(callback) {
     sinon.stub(githubAuthoriser, "authorise", callback);
+};
+
+module.exports.setSessionToken = function(token) {
+    cookieJar.setCookie(request.cookie("sessionToken=" + token), baseUrl);
 };
 
 module.exports.authenticateUser = function(githubUser, user, token) {
@@ -127,6 +135,26 @@ module.exports.getInsertOneArgs = function(collection, callNum) {
     return dbCollections[collection].insertOne.getCall(callNum).args;
 };
 
+module.exports.getOAuth = function(followRedirect) {
+    var requestUrl = baseUrl + "/oauth";
+    var requestOptions = {
+        url: requestUrl,
+        simple: false,
+        resolveWithFullResponse: true
+    };
+    if (followRedirect !== undefined) {
+        requestOptions.followRedirect = followRedirect;
+    }
+    return request(requestOptions);
+};
+module.exports.getOAuthUri = function() {
+    var requestUrl = baseUrl + "/api/oauth/uri";
+    return request({
+        url: requestUrl,
+        simple: false,
+        resolveWithFullResponse: true
+    });
+};
 module.exports.getUser = function() {
     var requestUrl = baseUrl + "/api/user";
     return request({
