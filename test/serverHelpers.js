@@ -88,7 +88,7 @@ module.exports.authenticateUser = function(githubUser, user, token) {
         authCallback(githubUser, token);
     });
 
-    dbCursors.users.singleResult.next.returns(Promise.resolve(user));
+    module.exports.setFindOneResult("users", true, user);
 
     return request({
         url: baseUrl + "/oauth",
