@@ -83,10 +83,9 @@ module.exports.authenticateUser = function(githubUser, user, token) {
     dbCursors.users.singleResult.next.returns(Promise.resolve(user));
 
     return request({
-        uri: baseUrl + "/oauth",
-        options: {
-            simple: false
-        }
+        url: baseUrl + "/oauth",
+        simple: false,
+        resolveWithFullResponse: true
     }).then(function(response) {
         cookieJar.setCookie(request.cookie("sessionToken=" + token), baseUrl);
         dbCollections.users.find.reset();
@@ -112,13 +111,13 @@ module.exports.setInsertOneResult = function(collection, success, result, callNu
 };
 
 module.exports.getFindCallCount = function(collection) {
-    return dbCursors[collection].toArray.callCount();
+    return dbCursors[collection].toArray.callCount;
 };
 module.exports.getFindOneCallCount = function(collection) {
-    return dbCursors[collection].singleResult.next.callCount();
+    return dbCursors[collection].singleResult.next.callCount;
 };
-module.exports.getInsertOneCount = function(collection) {
-    return dbCollections[collection].insertOne.callCount();
+module.exports.getInsertOneCallCount = function(collection) {
+    return dbCollections[collection].insertOne.callCount;
 };
 
 module.exports.getFindAnyArgs = function(collection, callNum) {
@@ -131,51 +130,47 @@ module.exports.getInsertOneArgs = function(collection, callNum) {
 module.exports.getUser = function() {
     var requestUrl = baseUrl + "/api/user";
     return request({
-        uri: requestUrl,
+        url: requestUrl,
         jar: cookieJar,
-        options: {
-            simple: false
-        }
+        simple: false,
+        resolveWithFullResponse: true
     });
 };
 module.exports.getUsers = function() {
     var requestUrl = baseUrl + "/api/users";
     return request({
-        uri: requestUrl,
+        url: requestUrl,
         jar: cookieJar,
-        options: {
-            simple: false
-        }
+        simple: false,
+        resolveWithFullResponse: true
     });
 };
 module.exports.getConversation = function(recipientID) {
     var requestUrl = baseUrl + "/api/conversations/" + recipientID;
     return request({
-        uri: requestUrl,
+        url: requestUrl,
         jar: cookieJar,
-        options: {
-            simple: false
-        }
+        simple: false,
+        resolveWithFullResponse: true
     });
 };
 module.exports.postConversation = function(recipientID) {
     var requestUrl = baseUrl + "/api/conversations";
     return request.post({
-        uri: requestUrl,
+        url: requestUrl,
         headers: {
             "Content-type": "application/json"
         },
         body: JSON.stringify({recipient: recipientID}),
         jar: cookieJar,
-        options: {
-            simple: false
-        }
+        simple: false,
+        resolveWithFullResponse: true
     });
 };
 module.exports.postMessage = function(conversationID, contents) {
     var requestUrl = baseUrl + "/api/messages";
     return request.post({
-        uri: requestUrl,
+        url: requestUrl,
         headers: {
             "Content-type": "application/json"
         },
@@ -184,18 +179,16 @@ module.exports.postMessage = function(conversationID, contents) {
             contents: contents
         }),
         jar: cookieJar,
-        options: {
-            simple: false
-        }
+        simple: false,
+        resolveWithFullResponse: true
     });
 };
 module.exports.getMessages = function(conversationID) {
     var requestUrl = baseUrl + "/api/messages/" + conversationID;
     return request({
-        uri: requestUrl,
+        url: requestUrl,
         jar: cookieJar,
-        options: {
-            simple: false
-        }
+        simple: false,
+        resolveWithFullResponse: true
     });
 };
