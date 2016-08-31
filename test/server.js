@@ -65,53 +65,8 @@ describe("server", function() {
     var serverInstance;
     var dbCollections;
     var dbCursors;
-    beforeEach(function() {
-        cookieJar = request.jar();
-        dbCollections = {
-            users: {
-                find: sinon.stub(),
-                insertOne: sinon.stub()
-            },
-            conversations: {
-                find: sinon.stub(),
-                insertOne: sinon.stub()
-            },
-            messages: {
-                find: sinon.stub(),
-                insertOne: sinon.stub()
-            }
-        };
-        dbCursors = {};
-        for (var key in dbCollections) {
-            if (dbCollections[key].find) {
-                dbCursors[key] = {
-                    limit: sinon.stub(),
-                    singleResult: {
-                        next: sinon.stub()
-                    },
-                    next: sinon.stub(),
-                    toArray: sinon.stub()
-                };
-                dbCursors[key].limit.withArgs(1).returns(dbCursors[key].singleResult);
-                dbCollections[key].find.returns(dbCursors[key]);
-            }
-        }
-        db = {
-            collection: sinon.stub()
-        };
-        db.collection.withArgs("users").returns(dbCollections.users);
-        db.collection.withArgs("conversations").returns(dbCollections.conversations);
-        db.collection.withArgs("messages").returns(dbCollections.messages);
-
-        githubAuthoriser = {
-            authorise: function() {},
-            oAuthUri: "https://github.com/login/oauth/authorize?client_id=" + oauthClientId
-        };
-        serverInstance = server(testPort, db, githubAuthoriser);
-    });
-    afterEach(function() {
-        serverInstance.close();
-    });
+    beforeEach(helpers.setupServer);
+    afterEach(helpers.teardownServer);
     function authenticateUser(githubUser, user, token, callback) {
         sinon.stub(githubAuthoriser, "authorise", function(req, authCallback) {
             authCallback(githubUser, token);
