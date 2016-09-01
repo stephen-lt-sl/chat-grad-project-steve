@@ -3,3 +3,7 @@ deployment:
     branch: master
     heroku:
       appname: chat-grad-project-steve
+  staging:
+    branch: *
+    heroku:
+      appname: chat-grad-project-steve-stage
