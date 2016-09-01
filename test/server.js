@@ -467,6 +467,34 @@ describe("server", function() {
                 });
             }
         );
+        it("attempts to update the containing conversation's timestamp if message is created successfully",
+            function() {
+                var beforeTimestamp;
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    beforeTimestamp = new Date();
+                    return helpers.postMessage(testMessage.conversationID, testMessage.contents);
+                }).then(function(response) {
+                    var afterTimestamp = new Date();
+                    assert.equal(helpers.getUpdateOneCallCount("conversations"), 1);
+                    var updateQuery = helpers.getUpdateOneArgs("conversations", 0)[0];
+                    var updateObject = helpers.getUpdateOneArgs("conversations", 0)[1];
+                    assert.deepEqual(updateQuery, {
+                        _id: testMessage.conversationID
+                    });
+                    assert.isDefined(updateObject.$set);
+                    var updateTimestamp = updateObject.$set.lastTimestamp;
+                    assert(beforeTimestamp.getTime() <= updateTimestamp.getTime(),
+                        "Timestamp is earlier than call"
+                    );
+                    assert(updateTimestamp.getTime() <= afterTimestamp.getTime(),
+                        "Timestamp is later than call"
+                    );
+                    assert.equal(response.statusCode, 200);
+                });
+            }
+        );
         it("responds with a body that is a JSON representation of the created message if message is " +
             "created successfully", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {

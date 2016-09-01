@@ -34,7 +34,8 @@ function setupDB() {
         },
         conversations: {
             find: sinon.stub(),
-            insertOne: sinon.stub()
+            insertOne: sinon.stub(),
+            updateOne: sinon.stub()
         },
         messages: {
             find: sinon.stub(),
@@ -127,12 +128,18 @@ module.exports.getFindOneCallCount = function(collection) {
 module.exports.getInsertOneCallCount = function(collection) {
     return dbCollections[collection].insertOne.callCount;
 };
+module.exports.getUpdateOneCallCount = function(collection) {
+    return dbCollections[collection].updateOne.callCount;
+};
 
 module.exports.getFindAnyArgs = function(collection, callNum) {
     return dbCollections[collection].find.getCall(callNum).args;
 };
 module.exports.getInsertOneArgs = function(collection, callNum) {
     return dbCollections[collection].insertOne.getCall(callNum).args;
+};
+module.exports.getUpdateOneArgs = function(collection, callNum) {
+    return dbCollections[collection].updateOne.getCall(callNum).args;
 };
 
 module.exports.getOAuth = function(followRedirect) {
