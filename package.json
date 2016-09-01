@@ -25,7 +25,6 @@
     "request-promise-native": "^1.0.3",
     "sinon": "^1.15.4",
     "style-loader": "^0.13.1",
-    "webpack": "^1.13.2",
     "webpack-dev-server": "^1.15.0"
   },
   "dependencies": {
@@ -41,6 +40,7 @@
     "grunt-mocha-test": "^0.12.7",
     "grunt-webpack": "^1.0.14",
     "mongodb": "^2.0.35",
-    "request": "^2.58.0"
+    "request": "^2.58.0",
+    "webpack": "^1.13.2"
   }
 }
