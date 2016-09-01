@@ -435,12 +435,8 @@ describe("server", function() {
                     var insertedMessage = helpers.getInsertOneArgs("messages", 0)[0];
                     assert.equal(insertedMessage.conversationID, testConversation._id);
                     assert.equal(insertedMessage.contents, testMessage.contents);
-                    assert(beforeTimestamp.getTime() <= insertedMessage.timestamp.getTime(),
-                        "Timestamp is earlier than call"
-                    );
-                    assert(insertedMessage.timestamp.getTime() <= afterTimestamp.getTime(),
-                        "Timestamp is later than call"
-                    );
+                    assert.isAtLeast(insertedMessage.timestamp.getTime(), beforeTimestamp.getTime());
+                    assert.isAtMost(insertedMessage.timestamp.getTime(), afterTimestamp.getTime());
                 });
             }
         );
@@ -485,13 +481,8 @@ describe("server", function() {
                     });
                     assert.isDefined(updateObject.$set);
                     var updateTimestamp = updateObject.$set.lastTimestamp;
-                    assert(beforeTimestamp.getTime() <= updateTimestamp.getTime(),
-                        "Timestamp is earlier than call"
-                    );
-                    assert(updateTimestamp.getTime() <= afterTimestamp.getTime(),
-                        "Timestamp is later than call"
-                    );
-                    assert.equal(response.statusCode, 200);
+                    assert.isAtLeast(updateTimestamp.getTime(), beforeTimestamp.getTime());
+                    assert.isAtMost(updateTimestamp.getTime(), afterTimestamp.getTime());
                 });
             }
         );
