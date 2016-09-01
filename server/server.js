@@ -161,6 +161,11 @@ module.exports = function(port, db, githubAuthoriser) {
                     contents: message,
                     timestamp: timestamp
                 }).then(function(result) {
+                    conversations.updateOne({
+                        _id: conversationID
+                    }, {
+                        $set: {lastTimestamp: timestamp}
+                    });
                     res.json(cleanIdField(result.ops[0]));
                 }).catch(function(err) {
                     res.sendStatus(500);
@@ -176,6 +181,8 @@ module.exports = function(port, db, githubAuthoriser) {
     app.get("/api/messages/:id", function(req, res) {
         var senderID = req.session.user;
         var conversationID = req.params.id;
+        var lastTimestamp = req.query.timestamp;
+        var countOnly = req.query.countOnly;
         conversations.find({
             _id: conversationID
         }).limit(1).next().then(function(conversation) {
@@ -183,13 +190,23 @@ module.exports = function(port, db, githubAuthoriser) {
                 return Promise.reject(false);
             }
             if (conversation.participants.indexOf(senderID) !== -1) {
-                messages.find({
-                    conversationID: conversationID
-                }).toArray().then(function(docs) {
-                    res.json(docs.map(cleanIdField));
-                }).catch(function(err) {
-                    res.sendStatus(500);
-                });
+                var queryObject = {conversationID: conversationID};
+                if (lastTimestamp) {
+                    queryObject.timestamp = {$gt: new Date(lastTimestamp)};
+                }
+                if (countOnly) {
+                    messages.count(queryObject).then(function(count) {
+                        res.json({count: count});
+                    }).catch(function(err) {
+                        res.sendStatus(500);
+                    });
+                } else {
+                    messages.find(queryObject).toArray().then(function(docs) {
+                        res.json(docs.map(cleanIdField));
+                    }).catch(function(err) {
+                        res.sendStatus(500);
+                    });
+                }
             } else {
                 res.sendStatus(403);
             }

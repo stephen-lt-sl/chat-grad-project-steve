@@ -33,6 +33,11 @@ var testConversation2 = {
     _id: "charlie,charlie",
     participants: ["charlie", "charlie"]
 };
+var testConversation3 = {
+    _id: "bob,charlie",
+    participants: ["bob", "charlie"],
+    lastTimestamp: new Date(2016, 8, 24, 14, 5, 3)
+};
 var testToken = "123123";
 var testExpiredToken = "987978";
 var testMessage = {
@@ -47,7 +52,7 @@ var testMessage2 = {
     senderID: "charlie",
     conversationID: "bob,charlie",
     contents: "waddup!",
-    timestamp: new Date(2016, 8, 24, 14, 5, 2)
+    timestamp: new Date(2016, 8, 24, 14, 5, 4)
 };
 var testMessageContents = "here come dat boi!";
 var testMessageContents2 = "waddup!";
@@ -435,12 +440,8 @@ describe("server", function() {
                     var insertedMessage = helpers.getInsertOneArgs("messages", 0)[0];
                     assert.equal(insertedMessage.conversationID, testConversation._id);
                     assert.equal(insertedMessage.contents, testMessage.contents);
-                    assert(beforeTimestamp.getTime() <= insertedMessage.timestamp.getTime(),
-                        "Timestamp is earlier than call"
-                    );
-                    assert(insertedMessage.timestamp.getTime() <= afterTimestamp.getTime(),
-                        "Timestamp is later than call"
-                    );
+                    assert.isAtLeast(insertedMessage.timestamp.getTime(), beforeTimestamp.getTime());
+                    assert.isAtMost(insertedMessage.timestamp.getTime(), afterTimestamp.getTime());
                 });
             }
         );
@@ -464,6 +465,29 @@ describe("server", function() {
                     return helpers.postMessage(testMessage.conversationID, testMessage.contents);
                 }).then(function(response) {
                     assert.equal(response.statusCode, 200);
+                });
+            }
+        );
+        it("attempts to update the containing conversation's timestamp if message is created successfully",
+            function() {
+                var beforeTimestamp;
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    beforeTimestamp = new Date();
+                    return helpers.postMessage(testMessage.conversationID, testMessage.contents);
+                }).then(function(response) {
+                    var afterTimestamp = new Date();
+                    assert.equal(helpers.getUpdateOneCallCount("conversations"), 1);
+                    var updateQuery = helpers.getUpdateOneArgs("conversations", 0)[0];
+                    var updateObject = helpers.getUpdateOneArgs("conversations", 0)[1];
+                    assert.deepEqual(updateQuery, {
+                        _id: testMessage.conversationID
+                    });
+                    assert.isDefined(updateObject.$set);
+                    var updateTimestamp = updateObject.$set.lastTimestamp;
+                    assert.isAtLeast(updateTimestamp.getTime(), beforeTimestamp.getTime());
+                    assert.isAtMost(updateTimestamp.getTime(), afterTimestamp.getTime());
                 });
             }
         );
@@ -555,6 +579,38 @@ describe("server", function() {
                 });
             }
         );
+        it("attempts to find only messages newer than the query timestamp if one exists", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                    return helpers.getMessages(testConversation._id, {
+                        timestamp: new Date(2016, 8, 24, 14, 5, 2).toISOString()
+                    });
+                }).then(function(response) {
+                    assert.equal(helpers.getFindCallCount("messages"), 1);
+                    assert.deepEqual(helpers.getFindAnyArgs("messages", 0)[0], {
+                        conversationID: testConversation._id,
+                        timestamp: {
+                            $gt: new Date(2016, 8, 24, 14, 5, 2)
+                        }
+                    });
+                });
+            }
+        );
+        it("attempts to find only the number of messages in the conversation if `countOnly` is passed true in the " +
+            "query", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setCountResult("messages", true, 2);
+                    return helpers.getMessages(testConversation._id, {countOnly: true});
+                }).then(function(response) {
+                    assert.equal(helpers.getCountCallCount("messages"), 1);
+                    assert.deepEqual(helpers.getCountArgs("messages", 0)[0], {
+                        conversationID: testConversation._id
+                    });
+                });
+            }
+        );
         it("responds with status code 200 if user is authenticated, conversation exists, and user is a participant",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
@@ -586,9 +642,22 @@ describe("server", function() {
                             senderID: "charlie",
                             conversationID: "bob,charlie",
                             contents: "waddup!",
-                            timestamp: new Date(2016, 8, 24, 14, 5, 2).toISOString()
+                            timestamp: new Date(2016, 8, 24, 14, 5, 4).toISOString()
                         }
                     ]);
+                });
+            }
+        );
+        it("responds with a body that is a JSON representation of the number of messages in the conversation if " +
+            "user is authenticated, conversation exists, and user is a participant", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setCountResult("messages", true, 2);
+                    return helpers.getMessages(testConversation._id, {countOnly: true});
+                }).then(function(response) {
+                    assert.deepEqual(JSON.parse(response.body), {
+                        count: 2
+                    });
                 });
             }
         );
@@ -597,6 +666,15 @@ describe("server", function() {
                 helpers.setFindOneResult("conversations", true, testConversation);
                 helpers.setFindResult("messages", false, {err: "Database failure"});
                 return helpers.getMessages(testConversation._id);
+            }).then(function(response) {
+                assert.equal(response.statusCode, 500);
+            });
+        });
+        it("responds with status code 500 if database error on find message count", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("conversations", true, testConversation);
+                helpers.setCountResult("messages", false, {err: "Database failure"});
+                return helpers.getMessages(testConversation._id, {countOnly: true});
             }).then(function(response) {
                 assert.equal(response.statusCode, 500);
             });
