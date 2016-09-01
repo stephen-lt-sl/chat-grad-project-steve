@@ -161,6 +161,11 @@ module.exports = function(port, db, githubAuthoriser) {
                     contents: message,
                     timestamp: timestamp
                 }).then(function(result) {
+                    conversations.updateOne({
+                        _id: conversationID
+                    }, {
+                        $set: {lastTimestamp: timestamp}
+                    });
                     res.json(cleanIdField(result.ops[0]));
                 }).catch(function(err) {
                     res.sendStatus(500);
