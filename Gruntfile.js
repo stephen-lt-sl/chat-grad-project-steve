@@ -1,9 +1,11 @@
 module.exports = function(grunt) {
-    grunt.loadNpmTasks("grunt-contrib-jshint");
-    grunt.loadNpmTasks("grunt-jscs");
     grunt.loadNpmTasks("grunt-webpack");
-    grunt.loadNpmTasks("grunt-mocha-test");
-    grunt.loadNpmTasks("grunt-mocha-istanbul");
+    if (process.env.NODE_ENV !== "production") {
+        grunt.loadNpmTasks("grunt-contrib-jshint");
+        grunt.loadNpmTasks("grunt-jscs");
+        grunt.loadNpmTasks("grunt-mocha-test");
+        grunt.loadNpmTasks("grunt-mocha-istanbul");
+    }
 
     var files = [
         "Gruntfile.js", "server.js", "server/**/*.js", "test/**/*.js", "public/**/*.js", "!public/build/*.js"
