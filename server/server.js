@@ -1,3 +1,5 @@
+/*global Promise */
+
 var express = require("express");
 var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
@@ -17,17 +19,23 @@ module.exports = function(port, db, githubAuthoriser) {
     app.get("/oauth", function(req, res) {
         githubAuthoriser.authorise(req, function(githubUser, token) {
             if (githubUser) {
-                users.findOne({
+                users.find({
                     _id: githubUser.login
-                }, function(err, user) {
+                }).limit(1).next().then(function(user) {
+                    // Adds the user to the DB if they do not exist
+                    // On resolution, returns the user as they appear in the DB
                     if (!user) {
-                        // TODO: Wait for this operation to complete
-                        users.insertOne({
+                        return users.insertOne({
                             _id: githubUser.login,
                             name: githubUser.name,
                             avatarUrl: githubUser.avatar_url
+                        }).then(function(result) {
+                            return result.ops[0];
                         });
                     }
+                    return user;
+                }).then(function(user) {
+                    // Creates a session for the user and redirects the client to the correct page
                     sessions[token] = {
                         user: githubUser.login
                     };
@@ -35,11 +43,9 @@ module.exports = function(port, db, githubAuthoriser) {
                     res.header("Location", "/");
                     res.sendStatus(302);
                 });
-            }
-            else {
+            } else {
                 res.sendStatus(400);
             }
-
         });
     });
 
@@ -63,24 +69,20 @@ module.exports = function(port, db, githubAuthoriser) {
     });
 
     app.get("/api/user", function(req, res) {
-        users.findOne({
+        users.find({
             _id: req.session.user
-        }, function(err, user) {
-            if (!err) {
-                res.json(user);
-            } else {
-                res.sendStatus(500);
-            }
+        }).limit(1).next().then(function(user) {
+            res.json(user);
+        }).catch(function(err) {
+            res.sendStatus(500);
         });
     });
 
     app.get("/api/users", function(req, res) {
-        users.find().toArray(function(err, docs) {
-            if (!err) {
-                res.json(docs.map(cleanIdField));
-            } else {
-                res.sendStatus(500);
-            }
+        users.find().toArray().then(function(docs) {
+            res.json(docs.map(cleanIdField));
+        }).catch(function(err) {
+            res.sendStatus(500);
         });
     });
 
@@ -93,19 +95,16 @@ module.exports = function(port, db, githubAuthoriser) {
 
     app.get("/api/conversations/:id", function(req, res) {
         var conversationID = getConversationID(req.session.user, req.params.id);
-        conversations.findOne({
+        conversations.find({
             _id: conversationID
-        }, function(err, conversation) {
-            if (!err) {
-                if (conversation) {
-                    res.json(cleanIdField(conversation));
-                }
-                else {
-                    res.sendStatus(404);
-                }
+        }).limit(1).next().then(function(conversation) {
+            if (conversation) {
+                res.json(cleanIdField(conversation));
             } else {
-                res.sendStatus(500);
+                res.sendStatus(404);
             }
+        }).catch(function(err) {
+            res.sendStatus(500);
         });
     });
 
@@ -114,36 +113,29 @@ module.exports = function(port, db, githubAuthoriser) {
         var recipientID = conversationInfo.recipient;
         var senderID = req.session.user;
         // Find both the sender and the recipient in the db
-        users.findOne({
+        users.find({
             _id: senderID
-        }, function(err, sender) {
-            if (!err && sender) {
-                users.findOne({
-                    _id: recipientID
-                }, function(err, recipient) {
-                    if (!err && recipient) {
-                        var conversationID = getConversationID(senderID, recipientID);
-                        var participants = [senderID, recipientID].sort();
-                        conversations.insertOne({
-                            _id: conversationID,
-                            participants: participants
-                        }, function(err, result) {
-                            if (!err) {
-                                res.json({
-                                    id: conversationID,
-                                    participants: participants
-                                });
-                            } else {
-                                res.sendStatus(500);
-                            }
-                        });
-                    } else {
-                        res.sendStatus(500);
-                    }
-                });
-            } else {
-                res.sendStatus(500);
+        }).limit(1).next().then(function(sender) {
+            if (!sender) {
+                return Promise.reject(false);
             }
+            return users.find({
+                _id: recipientID
+            }).limit(1).next();
+        }).then(function(recipient) {
+            if (!recipient) {
+                return Promise.reject(false);
+            }
+            var conversationID = getConversationID(senderID, recipientID);
+            var participants = [senderID, recipientID].sort();
+            return conversations.insertOne({
+                _id: conversationID,
+                participants: participants
+            });
+        }).then(function(result) {
+            res.json(cleanIdField(result.ops[0]));
+        }).catch(function(err) {
+            res.sendStatus(500);
         });
     });
 
@@ -155,61 +147,54 @@ module.exports = function(port, db, githubAuthoriser) {
             res.sendStatus(201);
             return;
         }
-        conversations.findOne({
+        conversations.find({
             _id: conversationID
-        }, function(err, conversation) {
-            if (!err && conversation) {
-                if (conversation.participants.indexOf(senderID) !== -1) {
-                    var timestamp = new Date();
-                    messages.insertOne({
-                        senderID: senderID,
-                        conversationID: conversationID,
-                        contents: message,
-                        timestamp: timestamp
-                    }, function(err, result) {
-                        if (!err) {
-                            res.json({
-                                id: result._id,
-                                conversationID: result.conversationID,
-                                contents: result.contents,
-                                timestamp: result.timestamp
-                            });
-                        } else {
-                            res.sendStatus(500);
-                        }
-                    });
-                } else {
-                    res.sendStatus(403);
-                }
-            } else {
-                res.sendStatus(500);
+        }).limit(1).next().then(function(conversation) {
+            if (!conversation) {
+                return Promise.reject(false);
             }
+            if (conversation.participants.indexOf(senderID) !== -1) {
+                var timestamp = new Date();
+                messages.insertOne({
+                    senderID: senderID,
+                    conversationID: conversationID,
+                    contents: message,
+                    timestamp: timestamp
+                }).then(function(result) {
+                    res.json(cleanIdField(result.ops[0]));
+                }).catch(function(err) {
+                    res.sendStatus(500);
+                });
+            } else {
+                res.sendStatus(403);
+            }
+        }).catch(function(err) {
+            res.sendStatus(500);
         });
     });
 
     app.get("/api/messages/:id", function(req, res) {
         var senderID = req.session.user;
         var conversationID = req.params.id;
-        conversations.findOne({
+        conversations.find({
             _id: conversationID
-        }, function(err, conversation) {
-            if (!err && conversation) {
-                if (conversation.participants.indexOf(senderID) !== -1) {
-                    messages.find({
-                        conversationID: conversationID
-                    }).toArray(function(err, docs) {
-                        if (!err) {
-                            res.json(docs.map(cleanIdField));
-                        } else {
-                            res.sendStatus(500);
-                        }
-                    });
-                } else {
-                    res.sendStatus(403);
-                }
-            } else {
-                res.sendStatus(500);
+        }).limit(1).next().then(function(conversation) {
+            if (!conversation) {
+                return Promise.reject(false);
             }
+            if (conversation.participants.indexOf(senderID) !== -1) {
+                messages.find({
+                    conversationID: conversationID
+                }).toArray().then(function(docs) {
+                    res.json(docs.map(cleanIdField));
+                }).catch(function(err) {
+                    res.sendStatus(500);
+                });
+            } else {
+                res.sendStatus(403);
+            }
+        }).catch(function(err) {
+            res.sendStatus(500);
         });
     });
 
