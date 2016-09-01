@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "postinstall": "grunt build",
     "test": "grunt test"
   },
   "repository": {
@@ -18,15 +19,20 @@
   "homepage": "https://github.com/joebandenburg/chat-grad-project",
   "devDependencies": {
     "chai": "^3.0.0",
+    "css-loader": "^0.24.0",
     "grunt": "^0.4.5",
     "grunt-contrib-jshint": "^0.11.2",
     "grunt-jscs": "^1.8.0",
     "grunt-mocha-istanbul": "^2.4.0",
     "grunt-mocha-test": "^0.12.7",
+    "grunt-webpack": "^1.0.14",
     "istanbul": "^0.3.17",
     "mocha": "^2.2.5",
     "request-promise-native": "^1.0.3",
-    "sinon": "^1.15.4"
+    "sinon": "^1.15.4",
+    "style-loader": "^0.13.1",
+    "webpack": "^1.13.2",
+    "webpack-dev-server": "^1.15.0"
   },
   "dependencies": {
     "URIjs": "^1.15.1",
