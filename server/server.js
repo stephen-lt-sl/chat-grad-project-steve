@@ -181,6 +181,7 @@ module.exports = function(port, db, githubAuthoriser) {
     app.get("/api/messages/:id", function(req, res) {
         var senderID = req.session.user;
         var conversationID = req.params.id;
+        var lastTimestamp = req.query.timestamp;
         conversations.find({
             _id: conversationID
         }).limit(1).next().then(function(conversation) {
@@ -188,9 +189,11 @@ module.exports = function(port, db, githubAuthoriser) {
                 return Promise.reject(false);
             }
             if (conversation.participants.indexOf(senderID) !== -1) {
-                messages.find({
-                    conversationID: conversationID
-                }).toArray().then(function(docs) {
+                var queryObject = {conversationID: conversationID};
+                if (lastTimestamp) {
+                    queryObject.timestamp = {$gt: new Date(lastTimestamp)};
+                }
+                messages.find(queryObject).toArray().then(function(docs) {
                     res.json(docs.map(cleanIdField));
                 }).catch(function(err) {
                     res.sendStatus(500);

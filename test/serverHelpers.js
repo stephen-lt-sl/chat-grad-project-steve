@@ -218,12 +218,16 @@ module.exports.postMessage = function(conversationID, contents) {
         resolveWithFullResponse: true
     });
 };
-module.exports.getMessages = function(conversationID) {
+module.exports.getMessages = function(conversationID, timestamp) {
     var requestUrl = baseUrl + "/api/messages/" + conversationID;
-    return request({
+    var requestObject = {
         url: requestUrl,
         jar: cookieJar,
         simple: false,
         resolveWithFullResponse: true
-    });
+    };
+    if (timestamp) {
+        requestObject.qs = {timestamp: timestamp};
+    }
+    return request(requestObject);
 };

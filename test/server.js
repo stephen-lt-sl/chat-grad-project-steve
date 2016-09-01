@@ -33,6 +33,11 @@ var testConversation2 = {
     _id: "charlie,charlie",
     participants: ["charlie", "charlie"]
 };
+var testConversation3 = {
+    _id: "bob,charlie",
+    participants: ["bob", "charlie"],
+    lastTimestamp: new Date(2016, 8, 24, 14, 5, 3)
+};
 var testToken = "123123";
 var testExpiredToken = "987978";
 var testMessage = {
@@ -47,7 +52,7 @@ var testMessage2 = {
     senderID: "charlie",
     conversationID: "bob,charlie",
     contents: "waddup!",
-    timestamp: new Date(2016, 8, 24, 14, 5, 2)
+    timestamp: new Date(2016, 8, 24, 14, 5, 4)
 };
 var testMessageContents = "here come dat boi!";
 var testMessageContents2 = "waddup!";
@@ -574,6 +579,22 @@ describe("server", function() {
                 });
             }
         );
+        it("attempts to find only messages newer than the query timestamp if one exists", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                    return helpers.getMessages(testConversation._id, new Date(2016, 8, 24, 14, 5, 2).toISOString());
+                }).then(function(response) {
+                    assert.equal(helpers.getFindCallCount("messages"), 1);
+                    assert.deepEqual(helpers.getFindAnyArgs("messages", 0)[0], {
+                        conversationID: testConversation._id,
+                        timestamp: {
+                            $gt: new Date(2016, 8, 24, 14, 5, 2)
+                        }
+                    });
+                });
+            }
+        );
         it("responds with status code 200 if user is authenticated, conversation exists, and user is a participant",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
@@ -605,7 +626,7 @@ describe("server", function() {
                             senderID: "charlie",
                             conversationID: "bob,charlie",
                             contents: "waddup!",
-                            timestamp: new Date(2016, 8, 24, 14, 5, 2).toISOString()
+                            timestamp: new Date(2016, 8, 24, 14, 5, 4).toISOString()
                         }
                     ]);
                 });
