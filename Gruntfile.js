@@ -5,6 +5,7 @@ module.exports = function(grunt) {
         grunt.loadNpmTasks("grunt-jscs");
         grunt.loadNpmTasks("grunt-mocha-test");
         grunt.loadNpmTasks("grunt-mocha-istanbul");
+        grunt.loadNpmTasks("grunt-concurrent");
     }
 
     var files = [
@@ -29,7 +30,7 @@ module.exports = function(grunt) {
                 entry: "./public/chatApp.js",
                 output: {
                     path: "./public/build",
-                    filename: "chatApp.min.js"
+                    filename: "chatApp.bundle.js"
                 },
                 module: {
                     loaders: [
@@ -39,6 +40,40 @@ module.exports = function(grunt) {
                 plugins: [
                     new webpack.optimize.UglifyJsPlugin({minimize: true})
                 ]
+            },
+            chatAppDev: {
+                entry: "./public/chatApp.js",
+                output: {
+                    path: "./public/build",
+                    filename: "chatApp.bundle.js"
+                },
+                module: {
+                    loaders: [
+                        {test: /\.css$/, loader: "style!css"}
+                    ]
+                }
+            },
+            chatAppDevWatch: {
+                entry: "./public/chatApp.js",
+                output: {
+                    path: "./public/build",
+                    filename: "chatApp.bundle.js"
+                },
+                watch: true,
+                keepalive: true,
+                module: {
+                    loaders: [
+                        {test: /\.css$/, loader: "style!css"}
+                    ]
+                }
+            }
+        },
+        concurrent: {
+            devServer: {
+                tasks: ["serve", "webpack:chatAppDevWatch"],
+                options: {
+                    logConcurrentOutput: true
+                }
             }
         },
         mochaTest: {
@@ -110,7 +145,11 @@ module.exports = function(grunt) {
         });
     });
 
-    grunt.registerTask("build", ["webpack:chatApp"]);
+    if (process.env.NODE_ENV === "production") {
+        grunt.registerTask("build", ["webpack:chatApp"]);
+    } else {
+        grunt.registerTask("build", ["webpack:chatAppDev"]);
+    }
     grunt.registerTask("check", ["jshint", "jscs"]);
     grunt.registerTask("test", ["check", "build", "mochaTest", "mocha_istanbul", "istanbul_report",
         "istanbul_check_coverage"]);
