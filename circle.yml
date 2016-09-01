@@ -4,6 +4,6 @@ deployment:
     heroku:
       appname: chat-grad-project-steve
   staging:
-    branch: *
+    branch: /*/
     heroku:
       appname: chat-grad-project-steve-stage
