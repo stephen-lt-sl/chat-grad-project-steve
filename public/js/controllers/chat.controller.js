@@ -13,6 +13,7 @@
 
         vm.loggedIn = false;
         vm.conversations = [];
+        vm.users = [];
 
         vm.openConversation = openConversation;
         vm.sendMessage = sendMessage;
@@ -51,7 +52,9 @@
                 vm.loggedIn = true;
                 vm.user = userResult.data;
                 chatDataService.getUsers().then(function(result) {
-                    vm.users = result.data;
+                    result.data.forEach(function(user) {
+                        displayUser(user);
+                    });
                 });
                 setInterval(function() {
                     vm.conversations.forEach(function(conversation) {
@@ -63,6 +66,21 @@
                     vm.loginUri = result.data.uri;
                 });
             });
+        }
+
+        function displayUser(newUserData) {
+            var userIdx = vm.users.findIndex(function(user) {
+                return user.data.id === newUserData.id;
+            });
+            if (userIdx === -1) {
+                vm.users.push({
+                    data: newUserData,
+                    unreadMessageCount: 0,
+                    lastReadTimestamp: "1970-1-1"
+                });
+            } else {
+                vm.users[userIdx].data = newUserData;
+            }
         }
 
         // If the given conversation is already being displayed, updates the current version to match, otherwise adds
@@ -136,9 +154,9 @@
 
         function getUserName(userID) {
             var userIdx = vm.users.findIndex(function(user) {
-                return user.id === userID;
+                return user.data.id === userID;
             });
-            return userIdx !== -1 ? vm.users[userIdx].name : "unknown";
+            return userIdx !== -1 ? vm.users[userIdx].data.name : "unknown";
         }
 
         function timestampString(timestamp) {
