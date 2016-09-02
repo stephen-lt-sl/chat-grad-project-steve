@@ -20,6 +20,7 @@
 
         vm.getUserName = getUserName;
         vm.getDisplayedConversations = getDisplayedConversations;
+        vm.getDisplayedConversationsData = getDisplayedConversationsData;
 
         vm.conversationBoxSizes = {
             width: 350,
@@ -72,10 +73,10 @@
             "new_messages": function(notificationData) {
                 if (vm.conversations[notificationData.conversationID]) {
                     // If we have the conversation open, refresh it
-                    refreshConversation(notificationData.conversationID);
+                    return refreshConversation(notificationData.conversationID);
                 } else {
                     // Otherwise set the unread message count for the user
-                    chatDataService.getConversationMessages(notificationData.conversationID, {
+                    return chatDataService.getConversationMessages(notificationData.conversationID, {
                         countOnly: true,
                         timestamp: notificationData.since
                     }).then(function(countResponse) {
@@ -109,6 +110,7 @@
                         vm.conversations[conversationResponse.data.id].data.lastTimestamp || "1970-1-1" :
                         user.lastReadTimestamp;
                     if (Date.parse(currentTimestamp) < Date.parse(newTimestamp)) {
+                        console.log("New notification");
                         var notification = {
                             type: "new_messages",
                             data: {
@@ -269,17 +271,25 @@
             });
             return conversations;
         }
+        function getDisplayedConversationsData() {
+            var conversationsData = Object.keys(vm.conversations).map(function(key) {
+                return vm.conversations[key].data;
+            });
+            return conversationsData;
+        }
+
+        var messageTimestampFormatter = new Intl.DateTimeFormat("en-US", {
+            hour12: false,
+            hour: "2-digit",
+            minute: "2-digit"
+        });
 
         function timestampString(timestamp) {
             var date = new Date(timestamp);
-            return "(" + new Intl.DateTimeFormat("en-US", {
-                hour12: false,
-                hour: "2-digit",
-                minute: "2-digit"
-            }).format(date) + ")";
+            return "(" + messageTimestampFormatter.format(date) + ")";
         }
-        function conversationName(conversation) {
-            var otherParticipants = conversation.data.participants.filter(function(participant) {
+        function conversationName(conversationData) {
+            var otherParticipants = conversationData.participants.filter(function(participant) {
                 return participant !== vm.user._id;
             });
             if (otherParticipants.length > 0) {
