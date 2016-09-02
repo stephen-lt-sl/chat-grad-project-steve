@@ -454,6 +454,63 @@ describe("server", function() {
                 });
             }
         );
+        it("attempts to upsert 'new_message' notification for each participant if message is successfully added",
+            function() {
+                var beforeTimestamp;
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    beforeTimestamp = new Date();
+                    return helpers.postMessage(testMessage.conversationID, testMessage.contents);
+                }).then(function(response) {
+                    var afterTimestamp = new Date();
+                    assert.equal(helpers.getUpdateOneCallCount("notifications"), 2);
+                    var firstTimestamp = helpers.getUpdateOneArgs("notifications", 0)[1].$set["data.since"];
+                    var secondTimestamp = helpers.getUpdateOneArgs("notifications", 1)[1].$set["data.since"];
+                    assert.isAtLeast(firstTimestamp.getTime(), beforeTimestamp.getTime());
+                    assert.isAtMost(firstTimestamp.getTime(), afterTimestamp.getTime());
+                    assert.equal(firstTimestamp, secondTimestamp);
+                    assert.deepEqual(helpers.getUpdateOneArgs("notifications", 0), [
+                        {
+                            userID: "bob",
+                            type: "new_message",
+                            "data.conversationID": testMessage.conversationID
+                        }, {
+                            $set: {
+                                userID: "bob",
+                                type: "new_message",
+                                "data.conversationID": testMessage.conversationID,
+                                "data.since": firstTimestamp
+                            },
+                            $inc: {
+                                "data.messageCount": 1
+                            }
+                        }, {
+                            upsert: true
+                        }
+                    ]);
+                    assert.deepEqual(helpers.getUpdateOneArgs("notifications", 1), [
+                        {
+                            userID: "charlie",
+                            type: "new_message",
+                            "data.conversationID": testMessage.conversationID
+                        }, {
+                            $set: {
+                                userID: "charlie",
+                                type: "new_message",
+                                "data.conversationID": testMessage.conversationID,
+                                "data.since": firstTimestamp
+                            },
+                            $inc: {
+                                "data.messageCount": 1
+                            }
+                        }, {
+                            upsert: true
+                        }
+                    ]);
+                });
+            }
+        );
         it("responds with status code 201 and creates no message if user is authenticated and message is blank",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
@@ -606,6 +663,21 @@ describe("server", function() {
                 });
             }
         );
+        it("attempts to delete the 'new_message' notification for the user-conversation pair", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                    return helpers.getMessages(testConversation._id);
+                }).then(function(response) {
+                    assert.equal(helpers.getDeleteOneCallCount("notifications"), 1);
+                    assert.deepEqual(helpers.getDeleteOneArgs("notifications", 0)[0], {
+                        userID: testUser._id,
+                        type: "new_message",
+                        "data.conversationID": testConversation._id
+                    });
+                });
+            }
+        );
         it("attempts to find only the number of messages in the conversation if `countOnly` is passed true in the " +
             "query", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
@@ -658,7 +730,8 @@ describe("server", function() {
             }
         );
         it("responds with a body that is a JSON representation of the number of messages in the conversation if " +
-            "user is authenticated, conversation exists, and user is a participant", function() {
+            "user is authenticated, conversation exists, user is a participant, and `countOnly` is specified",
+            function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation);
                     helpers.setCountResult("messages", true, 2);
