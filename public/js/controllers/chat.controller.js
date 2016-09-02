@@ -56,14 +56,72 @@
                         displayUser(user);
                     });
                 });
-                setInterval(function() {
-                    vm.conversations.forEach(function(conversation) {
-                        refreshMessages(conversation.data.id);
-                    });
-                }, 333);
+                setInterval(pollNotifications, 1000);
             }).catch(function() {
                 chatDataService.getOAuthUri().then(function(result) {
                     vm.loginUri = result.data.uri;
+                });
+            });
+        }
+
+        function processNotification(notification) {
+            if (notification.type === "new_messages") {
+                var conversationIdx = vm.conversations.findIndex(function(conversation) {
+                    return conversation.data.id === notification.data.conversationID;
+                });
+                if (conversationIdx !== -1) {
+                    // If we have the conversation open, refresh it
+                    refreshConversation(notification.data.conversationID);
+                } else {
+                    // Otherwise set the visible unread message count
+                    chatDataService.getConversationMessages(notification.data.conversationID, {
+                        countOnly: true,
+                        timestamp: notification.data.since
+                    }).then(function(countResponse) {
+                        var userIdx = vm.users.findIndex(function(currentUser) {
+                            return currentUser.data.id === notification.data.otherID;
+                        });
+                        if (userIdx !== -1) {
+                            vm.users[userIdx].unreadMessageCount = countResponse.data.count;
+                        }
+                    });
+                }
+            }
+        }
+
+        // Checks for new messages in any of the user's conversations (active or otherwise), and calls
+        // `processNotification` to resolve to an action if either has
+        function pollNotifications() {
+            var pollPromises = [];
+            var notifications = [];
+            vm.users.forEach(function(user) {
+                pollPromises.push(chatDataService.getConversation(user.data.id).then(function(conversationResponse) {
+                    var conversationIdx = vm.conversations.findIndex(function(conversation) {
+                        return conversation.data.id === conversationResponse.data.id;
+                    });
+                    var newTimestamp = conversationResponse.data.lastTimestamp || "1970-1-1";
+                    var currentTimestamp = conversationIdx !== -1 ?
+                        vm.conversations[conversationIdx].data.lastTimestamp || "1970-1-1" :
+                        user.lastReadTimestamp;
+                    if (Date.parse(currentTimestamp) < Date.parse(newTimestamp)) {
+                        var notification = {
+                            type: "new_messages",
+                            data: {
+                                conversationID: conversationResponse.data.id,
+                                messageCount: 0,
+                                otherID: getOtherID(conversationResponse.data),
+                                since: currentTimestamp
+                            }
+                        };
+                        notifications.push(notification);
+                    }
+                }).catch(function(errorResponse) {
+                    return errorResponse;
+                }));
+            });
+            return Promise.all(pollPromises).then(function() {
+                notifications.forEach(function(notification) {
+                    processNotification(notification);
                 });
             });
         }
@@ -97,8 +155,9 @@
                 });
                 refreshMessages(newConversationData.id);
             } else {
+                var oldTimestamp = vm.conversations[conversationIdx].data.lastTimestamp;
                 vm.conversations[conversationIdx].data = newConversationData;
-                refreshMessages(newConversationData.id);
+                refreshMessages(newConversationData.id, oldTimestamp);
             }
         }
 
@@ -125,19 +184,62 @@
                 displayConversation(conversation);
             });
         }
+        // Similar to `openConversation`, but assumes the conversation already exists and is being displayed, and is
+        // used to update the conversation from the server (including fetching messages)
+        function refreshConversation(conversationID) {
+            var conversationIdx = vm.conversations.findIndex(function(conversation) {
+                return conversation.data.id === conversationID;
+            });
+            var recipientID = getOtherID(vm.conversations[conversationIdx]);
+            return chatDataService.getConversation(recipientID).then(function(conversationResponse) {
+                displayConversation(conversationResponse.data);
+            });
+        }
+
+        function onConversationUpdated(conversation) {
+            var otherParticipants = conversation.data.participants.filter(function(participant) {
+                return participant !== vm.user._id;
+            });
+            var otherUserID = otherParticipants.length > 0 ? otherParticipants[0] : vm.user._id;
+            var otherUserIdx = vm.users.findIndex(function(user) {
+                return user.data.id === otherUserID;
+            });
+            vm.users[otherUserIdx].lastReadTimestamp = conversation.data.lastTimestamp;
+            vm.users[otherUserIdx].unreadMessageCount = 0;
+        }
 
         // Updates the message history for the conversation with the given ID, and returns a promise with the
         // server response
-        function refreshMessages(conversationID) {
-            return chatDataService.getConversationMessages(conversationID).then(function(messageResponse) {
+        function refreshMessages(conversationID, fromTimestamp) {
+            var params;
+            if (fromTimestamp) {
                 var conversationIdx = vm.conversations.findIndex(function(conversation) {
                     return conversation.data.id === conversationID;
                 });
                 if (conversationIdx !== -1) {
-                    vm.conversations[conversationIdx].messages = messageResponse.data;
+                    params = {
+                        timestamp: fromTimestamp
+                    };
                 }
-                return messageResponse;
-            }).catch(function(errorResponse) {
+            }
+            return chatDataService.getConversationMessages(conversationID, params).then(
+                function(messageResponse) {
+                    var conversationIdx = vm.conversations.findIndex(function(conversation) {
+                        return conversation.data.id === conversationID;
+                    });
+                    if (conversationIdx !== -1) {
+                        var newMessages = messageResponse.data;
+                        if (fromTimestamp) {
+                            newMessages = newMessages.filter(function(message) {
+                                return Date.parse(message.timestamp) > Date.parse(vm.conversations[conversationIdx].lastTimestamp);
+                            })
+                        }
+                        vm.conversations[conversationIdx].messages = vm.conversations[conversationIdx].messages.concat(messageResponse.data);
+                        onConversationUpdated(vm.conversations[conversationIdx]);
+                    }
+                    return messageResponse;
+                }
+            ).catch(function(errorResponse) {
                 console.log("Failed to update messages. Server returned code " + errorResponse.status + ".");
                 return errorResponse;
             });
@@ -148,7 +250,7 @@
             var contents = vm.conversations[idx].messageEntryText;
             vm.conversations[idx].messageEntryText = "";
             chatDataService.submitMessage(conversationID, contents).then(function(messageAddResult) {
-                refreshMessages(conversationID);
+                refreshConversation(conversationID);
             });
         }
 
@@ -157,6 +259,16 @@
                 return user.data.id === userID;
             });
             return userIdx !== -1 ? vm.users[userIdx].data.name : "unknown";
+        }
+        function getOtherID(conversation) {
+            var otherParticipants = conversation.data.participants.filter(function(participant) {
+                return participant !== vm.user._id;
+            });
+            if (otherParticipants.length > 0) {
+                return otherParticipants[0];
+            } else {
+                return vm.user._id;
+            }
         }
 
         function timestampString(timestamp) {
