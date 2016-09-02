@@ -67,19 +67,20 @@
             });
         }
 
-        function processNotification(notification) {
-            if (notification.type === "new_messages") {
-                if (vm.conversations[notification.data.conversationID]) {
+        // Set of functions for handling different notification types
+        var notificationHandler = {
+            "new_messages": function(notificationData) {
+                if (vm.conversations[notificationData.conversationID]) {
                     // If we have the conversation open, refresh it
-                    refreshConversation(notification.data.conversationID);
+                    refreshConversation(notificationData.conversationID);
                 } else {
-                    // Otherwise set the visible unread message count
-                    chatDataService.getConversationMessages(notification.data.conversationID, {
+                    // Otherwise set the unread message count for the user
+                    chatDataService.getConversationMessages(notificationData.conversationID, {
                         countOnly: true,
-                        timestamp: notification.data.since
+                        timestamp: notificationData.since
                     }).then(function(countResponse) {
                         var userIdx = vm.users.findIndex(function(currentUser) {
-                            return currentUser.data.id === notification.data.otherID;
+                            return currentUser.data.id === notificationData.otherID;
                         });
                         if (userIdx !== -1) {
                             vm.users[userIdx].unreadMessageCount = countResponse.data.count;
@@ -87,6 +88,13 @@
                     });
                 }
             }
+        };
+
+        // Performs an action based on the received notification; this action does not necessarily "resolve" the
+        // notification, but should be idempotent if the server has not changed state since the notification was
+        // generated
+        function processNotification(notification) {
+            return notificationHandler[notification.type](notification.data);
         }
 
         // Checks for new messages in any of the user's conversations (active or otherwise), and calls
