@@ -168,23 +168,25 @@ module.exports = function(port, db, githubAuthoriser) {
                     }, {
                         $set: {lastTimestamp: timestamp}
                     });
-                    // Upsert a "new_message" notification
-                    notifications.updateOne({
-                        userID: senderID,
-                        type: "new_message",
-                        "data.conversationID": conversationID
-                    }, {
-                        $set: {
-                            userID: senderID,
+                    // Upsert a "new_message" notification for each participant
+                    conversation.participants.forEach(function(participant) {
+                        notifications.updateOne({
+                            userID: participant,
                             type: "new_message",
-                            "data.conversationID": conversationID,
-                            "data.since": timestamp
-                        },
-                        $inc: {
-                            "data.messageCount": 1
-                        }
-                    }, {
-                        upsert: true
+                            "data.conversationID": conversationID
+                        }, {
+                            $set: {
+                                userID: participant,
+                                type: "new_message",
+                                "data.conversationID": conversationID,
+                                "data.since": timestamp
+                            },
+                            $inc: {
+                                "data.messageCount": 1
+                            }
+                        }, {
+                            upsert: true
+                        });
                     });
                     // Return new message
                     res.json(cleanIdField(result.ops[0]));
@@ -242,12 +244,14 @@ module.exports = function(port, db, githubAuthoriser) {
         });
     });
 
-    app.get("/api/notifications/:id", function(req, res) {
+    app.get("/api/notifications", function(req, res) {
         var userID = req.session.user;
         notifications.find({
             userID: userID
         }).toArray().then(function(docs) {
             res.json(docs.map(cleanIdField));
+        }).catch(function(err) {
+            res.sendStatus(500);
         });
     });
 
