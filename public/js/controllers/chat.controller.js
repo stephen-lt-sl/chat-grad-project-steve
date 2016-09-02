@@ -12,13 +12,14 @@
         var vm = this;
 
         vm.loggedIn = false;
-        vm.conversations = [];
+        vm.conversations = {};
         vm.users = [];
 
         vm.openConversation = openConversation;
         vm.sendMessage = sendMessage;
 
         vm.getUserName = getUserName;
+        vm.getDisplayedConversations = getDisplayedConversations;
 
         vm.conversationBoxSizes = {
             width: 350,
@@ -66,10 +67,7 @@
 
         function processNotification(notification) {
             if (notification.type === "new_messages") {
-                var conversationIdx = vm.conversations.findIndex(function(conversation) {
-                    return conversation.data.id === notification.data.conversationID;
-                });
-                if (conversationIdx !== -1) {
+                if (vm.conversations[notification.data.conversationID]) {
                     // If we have the conversation open, refresh it
                     refreshConversation(notification.data.conversationID);
                 } else {
@@ -96,12 +94,9 @@
             var notifications = [];
             vm.users.forEach(function(user) {
                 pollPromises.push(chatDataService.getConversation(user.data.id).then(function(conversationResponse) {
-                    var conversationIdx = vm.conversations.findIndex(function(conversation) {
-                        return conversation.data.id === conversationResponse.data.id;
-                    });
                     var newTimestamp = conversationResponse.data.lastTimestamp || "1970-1-1";
-                    var currentTimestamp = conversationIdx !== -1 ?
-                        vm.conversations[conversationIdx].data.lastTimestamp || "1970-1-1" :
+                    var currentTimestamp = vm.conversations[conversationResponse.data.id] ?
+                        vm.conversations[conversationResponse.data.id].data.lastTimestamp || "1970-1-1" :
                         user.lastReadTimestamp;
                     if (Date.parse(currentTimestamp) < Date.parse(newTimestamp)) {
                         var notification = {
@@ -144,19 +139,16 @@
         // If the given conversation is already being displayed, updates the current version to match, otherwise adds
         // the conversation to the display list
         function displayConversation(newConversationData) {
-            var conversationIdx = vm.conversations.findIndex(function(conversation) {
-                return conversation.data.id === newConversationData.id;
-            });
-            if (conversationIdx === -1) {
-                vm.conversations.push({
+            if (!vm.conversations[newConversationData.id]) {
+                vm.conversations[newConversationData.id] = {
                     data: newConversationData,
                     messageEntryText: "",
                     messages: []
-                });
+                };
                 refreshMessages(newConversationData.id);
             } else {
-                var oldTimestamp = vm.conversations[conversationIdx].data.lastTimestamp;
-                vm.conversations[conversationIdx].data = newConversationData;
+                var oldTimestamp = vm.conversations[newConversationData.id].data.lastTimestamp;
+                vm.conversations[newConversationData.id].data = newConversationData;
                 refreshMessages(newConversationData.id, oldTimestamp);
             }
         }
@@ -187,10 +179,7 @@
         // Similar to `openConversation`, but assumes the conversation already exists and is being displayed, and is
         // used to update the conversation from the server (including fetching messages)
         function refreshConversation(conversationID) {
-            var conversationIdx = vm.conversations.findIndex(function(conversation) {
-                return conversation.data.id === conversationID;
-            });
-            var recipientID = getOtherID(vm.conversations[conversationIdx]);
+            var recipientID = getOtherID(vm.conversations[conversationID].data);
             return chatDataService.getConversation(recipientID).then(function(conversationResponse) {
                 displayConversation(conversationResponse.data);
             });
@@ -213,10 +202,7 @@
         function refreshMessages(conversationID, fromTimestamp) {
             var params;
             if (fromTimestamp) {
-                var conversationIdx = vm.conversations.findIndex(function(conversation) {
-                    return conversation.data.id === conversationID;
-                });
-                if (conversationIdx !== -1) {
+                if (vm.conversations[conversationID]) {
                     params = {
                         timestamp: fromTimestamp
                     };
@@ -224,18 +210,15 @@
             }
             return chatDataService.getConversationMessages(conversationID, params).then(
                 function(messageResponse) {
-                    var conversationIdx = vm.conversations.findIndex(function(conversation) {
-                        return conversation.data.id === conversationID;
-                    });
-                    if (conversationIdx !== -1) {
+                    if (vm.conversations[conversationID]) {
                         var newMessages = messageResponse.data;
                         if (fromTimestamp) {
                             newMessages = newMessages.filter(function(message) {
-                                return Date.parse(message.timestamp) > Date.parse(vm.conversations[conversationIdx].lastTimestamp);
+                                return Date.parse(message.timestamp) > Date.parse(vm.conversations[conversationID].lastTimestamp);
                             })
                         }
-                        vm.conversations[conversationIdx].messages = vm.conversations[conversationIdx].messages.concat(messageResponse.data);
-                        onConversationUpdated(vm.conversations[conversationIdx]);
+                        vm.conversations[conversationID].messages = vm.conversations[conversationID].messages.concat(messageResponse.data);
+                        onConversationUpdated(vm.conversations[conversationID]);
                     }
                     return messageResponse;
                 }
@@ -245,10 +228,9 @@
             });
         }
 
-        function sendMessage(idx) {
-            var conversationID = vm.conversations[idx].data.id;
-            var contents = vm.conversations[idx].messageEntryText;
-            vm.conversations[idx].messageEntryText = "";
+        function sendMessage(conversationID) {
+            var contents = vm.conversations[conversationID].messageEntryText;
+            vm.conversations[conversationID].messageEntryText = "";
             chatDataService.submitMessage(conversationID, contents).then(function(messageAddResult) {
                 refreshConversation(conversationID);
             });
@@ -260,8 +242,8 @@
             });
             return userIdx !== -1 ? vm.users[userIdx].data.name : "unknown";
         }
-        function getOtherID(conversation) {
-            var otherParticipants = conversation.data.participants.filter(function(participant) {
+        function getOtherID(conversationData) {
+            var otherParticipants = conversationData.participants.filter(function(participant) {
                 return participant !== vm.user._id;
             });
             if (otherParticipants.length > 0) {
@@ -269,6 +251,12 @@
             } else {
                 return vm.user._id;
             }
+        }
+        function getDisplayedConversations() {
+            var conversations = Object.keys(vm.conversations).map(function(key) {
+                return vm.conversations[key];
+            });
+            return conversations;
         }
 
         function timestampString(timestamp) {

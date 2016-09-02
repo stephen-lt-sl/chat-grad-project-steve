@@ -20,7 +20,7 @@
             </div>
             <div class="verticalDivider"></div>
             <div class="conversationsSection">
-                <div ng-repeat="(idx, conversation) in chatVm.conversations track by $index"
+                <div ng-repeat="(idx, conversation) in chatVm.getDisplayedConversations() track by $index"
                     ng-style="{width: chatVm.getSize('width'), height: chatVm.getSize('totalHeight')}" class="conversationBox">
                     <div ng-style="{height: chatVm.getSize('header')}" class="conversationHeader">
                         <b>{{chatVm.conversationName(conversation)}}</b>
@@ -35,7 +35,7 @@
                             <span style="">{{message.contents}}</span>
                         </div>
                     </div>
-                    <form ng-style="{height: chatVm.getSize('send')}" id="message-form" ng-submit="chatVm.sendMessage(idx)" class="conversationSendForm">
+                    <form ng-style="{height: chatVm.getSize('send')}" id="message-form" ng-submit="chatVm.sendMessage(conversation.data.id)" class="conversationSendForm">
                         <input id="new-message" ng-model="conversation.messageEntryText" placeholder="New message..."
                             class="conversationSendFormInput" ng-style="{width: chatVm.getSize('sendBoxWidth')}">
                         <input id="send-message" type="submit" value="Send" class="button conversationSendFormButton" ng-style="{width: chatVm.getSize('buttonWidth')}">
