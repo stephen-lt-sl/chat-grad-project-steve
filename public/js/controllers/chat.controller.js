@@ -58,7 +58,7 @@
                     });
                 }).then(function() {
                     pollNotifications();
-                    $interval(pollNotifications, 5000);
+                    $interval(pollNotifications, 500);
                 });
             }).catch(function() {
                 chatDataService.getOAuthUri().then(function(result) {
@@ -220,15 +220,16 @@
             }
             return chatDataService.getConversationMessages(conversationID, params).then(
                 function(messageResponse) {
-                    if (vm.conversations[conversationID]) {
+                    var conversation = vm.conversations[conversationID];
+                    if (conversation) {
                         var newMessages = messageResponse.data;
                         if (fromTimestamp) {
                             newMessages = newMessages.filter(function(message) {
-                                return Date.parse(message.timestamp) > Date.parse(vm.conversations[conversationID].lastTimestamp);
-                            })
+                                return Date.parse(message.timestamp) > Date.parse(conversation.lastTimestamp);
+                            });
                         }
-                        vm.conversations[conversationID].messages = vm.conversations[conversationID].messages.concat(messageResponse.data);
-                        onConversationUpdated(vm.conversations[conversationID]);
+                        conversation.messages = conversation.messages.concat(messageResponse.data);
+                        onConversationUpdated(conversation);
                     }
                     return messageResponse;
                 }
