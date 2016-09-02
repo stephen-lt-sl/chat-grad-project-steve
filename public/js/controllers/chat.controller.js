@@ -5,9 +5,9 @@
         .module("ChatApp")
         .controller("ChatController", ChatController);
 
-    ChatController.$inject = ["chatDataService"];
+    ChatController.$inject = ["chatDataService", "$interval"];
 
-    function ChatController(chatDataService) {
+    function ChatController(chatDataService, $interval) {
         /* jshint validthis: true */
         var vm = this;
 
@@ -56,8 +56,10 @@
                     result.data.forEach(function(user) {
                         displayUser(user);
                     });
+                }).then(function() {
+                    pollNotifications();
+                    $interval(pollNotifications, 5000);
                 });
-                setInterval(pollNotifications, 1000);
             }).catch(function() {
                 chatDataService.getOAuthUri().then(function(result) {
                     vm.loginUri = result.data.uri;
