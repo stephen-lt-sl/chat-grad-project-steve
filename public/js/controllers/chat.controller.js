@@ -92,7 +92,7 @@
         };
 
         // Performs an action based on the received notification; this action does not necessarily "resolve" the
-        // notification, but should be idempotent if the server has not changed state since the notification was
+        // notification, but should not make any changes if the server has not changed state since the notification was
         // generated
         function processNotification(notification) {
             return notificationHandler[notification.type](notification.data);
