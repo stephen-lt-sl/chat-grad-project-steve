@@ -14,6 +14,7 @@ module.exports = function(port, db, githubAuthoriser) {
     var users = db.collection("users");
     var conversations = db.collection("conversations");
     var messages = db.collection("messages");
+    var notifications = db.collection("notifications");
     var sessions = {};
 
     app.get("/oauth", function(req, res) {
@@ -161,11 +162,31 @@ module.exports = function(port, db, githubAuthoriser) {
                     contents: message,
                     timestamp: timestamp
                 }).then(function(result) {
+                    // Update conversation timestamp
                     conversations.updateOne({
                         _id: conversationID
                     }, {
                         $set: {lastTimestamp: timestamp}
                     });
+                    // Upsert a "new_message" notification
+                    notifications.updateOne({
+                        userID: senderID,
+                        type: "new_message",
+                        "data.conversationID": conversationID
+                    }, {
+                        $set: {
+                            userID: senderID,
+                            type: "new_message",
+                            "data.conversationID": conversationID,
+                            "data.since": timestamp
+                        },
+                        $inc: {
+                            "data.messageCount": 1
+                        }
+                    }, {
+                        upsert: true
+                    });
+                    // Return new message
                     res.json(cleanIdField(result.ops[0]));
                 }).catch(function(err) {
                     res.sendStatus(500);
@@ -202,6 +223,12 @@ module.exports = function(port, db, githubAuthoriser) {
                     });
                 } else {
                     messages.find(queryObject).toArray().then(function(docs) {
+                        // Clear "new_message" notifications for the user-conversation pair
+                        notifications.deleteOne({
+                            userID: senderID,
+                            type: "new_message",
+                            "data.conversationID": conversationID
+                        });
                         res.json(docs.map(cleanIdField));
                     }).catch(function(err) {
                         res.sendStatus(500);
@@ -212,6 +239,15 @@ module.exports = function(port, db, githubAuthoriser) {
             }
         }).catch(function(err) {
             res.sendStatus(500);
+        });
+    });
+
+    app.get("/api/notifications/:id", function(req, res) {
+        var userID = req.session.user;
+        notifications.find({
+            userID: userID
+        }).toArray().then(function(docs) {
+            res.json(docs.map(cleanIdField));
         });
     });
 
