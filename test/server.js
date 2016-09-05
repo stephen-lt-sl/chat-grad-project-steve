@@ -473,14 +473,15 @@ describe("server", function() {
                     assert.deepEqual(helpers.getUpdateOneArgs("notifications", 0), [
                         {
                             userID: "bob",
-                            type: "new_message",
+                            type: "new_messages",
                             "data.conversationID": testMessage.conversationID
                         }, {
                             $set: {
                                 userID: "bob",
-                                type: "new_message",
+                                type: "new_messages",
                                 "data.conversationID": testMessage.conversationID,
-                                "data.since": firstTimestamp
+                                "data.since": firstTimestamp,
+                                "data.otherID": "charlie"
                             },
                             $inc: {
                                 "data.messageCount": 1
@@ -492,14 +493,15 @@ describe("server", function() {
                     assert.deepEqual(helpers.getUpdateOneArgs("notifications", 1), [
                         {
                             userID: "charlie",
-                            type: "new_message",
+                            type: "new_messages",
                             "data.conversationID": testMessage.conversationID
                         }, {
                             $set: {
                                 userID: "charlie",
-                                type: "new_message",
+                                type: "new_messages",
                                 "data.conversationID": testMessage.conversationID,
-                                "data.since": firstTimestamp
+                                "data.since": firstTimestamp,
+                                "data.otherID": "bob"
                             },
                             $inc: {
                                 "data.messageCount": 1
@@ -672,7 +674,7 @@ describe("server", function() {
                     assert.equal(helpers.getDeleteOneCallCount("notifications"), 1);
                     assert.deepEqual(helpers.getDeleteOneArgs("notifications", 0)[0], {
                         userID: testUser._id,
-                        type: "new_message",
+                        type: "new_messages",
                         "data.conversationID": testConversation._id
                     });
                 });

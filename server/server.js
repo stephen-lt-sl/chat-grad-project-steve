@@ -168,18 +168,21 @@ module.exports = function(port, db, githubAuthoriser) {
                     }, {
                         $set: {lastTimestamp: timestamp}
                     });
-                    // Upsert a "new_message" notification for each participant
+                    // Upsert a "new_messages" notification for each participant
                     conversation.participants.forEach(function(participant) {
                         notifications.updateOne({
                             userID: participant,
-                            type: "new_message",
+                            type: "new_messages",
                             "data.conversationID": conversationID
                         }, {
                             $set: {
                                 userID: participant,
-                                type: "new_message",
+                                type: "new_messages",
                                 "data.conversationID": conversationID,
-                                "data.since": timestamp
+                                "data.since": timestamp,
+                                "data.otherID": conversation.participants.filter(function(otherParticipant) {
+                                    return otherParticipant !== participant;
+                                })[0]
                             },
                             $inc: {
                                 "data.messageCount": 1
@@ -225,10 +228,10 @@ module.exports = function(port, db, githubAuthoriser) {
                     });
                 } else {
                     messages.find(queryObject).toArray().then(function(docs) {
-                        // Clear "new_message" notifications for the user-conversation pair
+                        // Clear "new_messages" notifications for the user-conversation pair
                         notifications.deleteOne({
                             userID: senderID,
-                            type: "new_message",
+                            type: "new_messages",
                             "data.conversationID": conversationID
                         });
                         res.json(docs.map(cleanIdField));
