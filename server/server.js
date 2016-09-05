@@ -15,6 +15,7 @@ module.exports = function(port, db, githubAuthoriser) {
     var conversations = db.collection("conversations");
     var messages = db.collection("messages");
     var notifications = db.collection("notifications");
+    var groups = db.collection("groups");
     var sessions = {};
 
     app.get("/oauth", function(req, res) {
@@ -255,6 +256,28 @@ module.exports = function(port, db, githubAuthoriser) {
             res.json(docs.map(cleanIdField));
         }).catch(function(err) {
             res.sendStatus(500);
+        });
+    });
+
+    app.post("/api/groups", function(req, res) {
+        var groupInfo = req.body;
+        var creatorID = req.session.user;
+        groups.find({
+            name: groupInfo.name
+        }).limit(1).next().then(function(group) {
+            if (!group) {
+                groups.insertOne({
+                    name: groupInfo.name,
+                    description: groupInfo.description,
+                    users: [creatorID]
+                }).then(function(result) {
+                    res.json(cleanIdField(result.ops[0]));
+                }).catch(function(err) {
+                    res.sendStatus(500);
+                });
+            } else {
+                res.sendStatus(409);
+            }
         });
     });
 
