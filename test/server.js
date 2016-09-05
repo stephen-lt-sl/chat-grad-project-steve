@@ -454,8 +454,8 @@ describe("server", function() {
                 });
             }
         );
-        it("attempts to upsert 'new_message' notification for each participant if message is successfully added",
-            function() {
+        it("attempts to upsert 'new_messages' notification using correct timestamps if messages is successfully " +
+            "added", function() {
                 var beforeTimestamp;
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation);
@@ -471,6 +471,18 @@ describe("server", function() {
                     assert.isAtLeast(firstTimestamp.getTime(), beforeTimestamp.getTime());
                     assert.isAtMost(firstTimestamp.getTime(), afterTimestamp.getTime());
                     assert.equal(firstTimestamp, secondTimestamp);
+                });
+            }
+        );
+        it("attempts to upsert 'new_messages' notification for each participant if message is successfully added",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    return helpers.postMessage(testMessage.conversationID, testMessage.contents);
+                }).then(function(response) {
+                    assert.equal(helpers.getUpdateOneCallCount("notifications"), 2);
+                    var timestamp = helpers.getUpdateOneArgs("notifications", 0)[1].$set["data.since"];
                     // Verify that notification upserts have been performed with correct values
                     // Query values
                     var upsertQuery = {
@@ -484,7 +496,7 @@ describe("server", function() {
                             userID: "bob",
                             type: "new_messages",
                             "data.conversationID": testMessage.conversationID,
-                            "data.since": firstTimestamp,
+                            "data.since": timestamp,
                             "data.otherID": "charlie"
                         },
                         $inc: {
