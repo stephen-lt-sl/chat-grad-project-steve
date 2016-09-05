@@ -46,6 +46,12 @@ function setupDB() {
             find: sinon.stub(),
             updateOne: sinon.stub(),
             deleteOne: sinon.stub()
+        },
+        groups: {
+            find: sinon.stub(),
+            insertOne: sinon.stub(),
+            updateOne: sinon.stub(),
+            findOneAndUpdate: sinon.stub()
         }
     };
     dbCursors = {};
@@ -70,6 +76,7 @@ function setupDB() {
     db.collection.withArgs("conversations").returns(dbCollections.conversations);
     db.collection.withArgs("messages").returns(dbCollections.messages);
     db.collection.withArgs("notifications").returns(dbCollections.notifications);
+    db.collection.withArgs("groups").returns(dbCollections.groups);
 }
 function setupAuthentication() {
     cookieJar = request.jar();
@@ -140,6 +147,11 @@ module.exports.setCountResult = function(collection, success, result, callNum) {
     var dbCursorCall = callNum === undefined ? dbCursor : dbCursor.onCall(callNum);
     dbCursorCall.returns(success ? Promise.resolve(result) : Promise.reject(result));
 };
+module.exports.setFindOneAndUpdateResult = function(collection, success, result, callNum) {
+    var dbCursor = dbCollections[collection].findOneAndUpdate;
+    var dbCursorCall = callNum === undefined ? dbCursor : dbCursor.onCall(callNum);
+    dbCursorCall.returns(success ? Promise.resolve({value: result}) : Promise.reject(result));
+};
 
 module.exports.getFindCallCount = function(collection) {
     return dbCursors[collection].toArray.callCount;
@@ -159,6 +171,9 @@ module.exports.getDeleteOneCallCount = function(collection) {
 module.exports.getCountCallCount = function(collection) {
     return dbCollections[collection].count.callCount;
 };
+module.exports.getFindOneAndUpdateCallCount = function(collection) {
+    return dbCollections[collection].findOneAndUpdate.callCount;
+};
 
 module.exports.getFindAnyArgs = function(collection, callNum) {
     return dbCollections[collection].find.getCall(callNum).args;
@@ -174,6 +189,9 @@ module.exports.getDeleteOneArgs = function(collection, callNum) {
 };
 module.exports.getCountArgs = function(collection, callNum) {
     return dbCollections[collection].count.getCall(callNum).args;
+};
+module.exports.getFindOneAndUpdateArgs = function(collection, callNum) {
+    return dbCollections[collection].findOneAndUpdate.getCall(callNum).args;
 };
 
 module.exports.getOAuth = function(followRedirect) {
@@ -277,4 +295,36 @@ module.exports.getNotifications = function(conversationID, queryParams) {
         requestObject.qs = queryParams;
     }
     return request(requestObject);
+};
+module.exports.postGroup = function(name, description) {
+    var requestUrl = baseUrl + "/api/groups";
+    return request.post({
+        url: requestUrl,
+        headers: {
+            "Content-type": "application/json"
+        },
+        body: JSON.stringify({
+            name: name,
+            description: description
+        }),
+        jar: cookieJar,
+        simple: false,
+        resolveWithFullResponse: true
+    });
+};
+module.exports.putGroup = function(id, groupInfo, newUsers) {
+    var requestUrl = baseUrl + "/api/groups/" + id;
+    return request.put({
+        url: requestUrl,
+        headers: {
+            "Content-type": "application/json"
+        },
+        body: JSON.stringify({
+            groupInfo: groupInfo,
+            newUsers: newUsers
+        }),
+        jar: cookieJar,
+        simple: false,
+        resolveWithFullResponse: true
+    });
 };
