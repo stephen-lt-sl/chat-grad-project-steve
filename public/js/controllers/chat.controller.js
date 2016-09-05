@@ -18,6 +18,9 @@
         vm.toggleConversation = toggleConversation;
         vm.sendMessage = sendMessage;
 
+        vm.currentActionsSection = "conversations";
+        vm.setCurrentActionsSection = setCurrentActionsSection;
+
         vm.getUserName = getUserName;
         vm.getDisplayedConversations = getDisplayedConversations;
         vm.getDisplayedConversationsData = getDisplayedConversationsData;
@@ -121,6 +124,10 @@
             } else {
                 vm.users[userIdx].data = newUserData;
             }
+        }
+
+        function setCurrentActionsSection(section) {
+            vm.currentActionsSection = section;
         }
 
         // If the given conversation is already being displayed, updates the current version to match, otherwise adds

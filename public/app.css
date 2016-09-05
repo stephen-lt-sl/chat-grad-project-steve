@@ -10,20 +10,20 @@ html, body {
 
 .chatSelectSection {
     float: left;
-    width: 200px;
-    padding: 0px 35px 100px 15px;
+    width: 280px;
+    padding: 0px 5px 100px 15px;
 }
 
 .verticalDivider {
     float: left;
     border-right: 1px solid #000000;
     height: 100%;
-    min-width: 50px;
+    min-width: 49px;
 }
 
 .actionsSection {
     float: left;
-    width: calc(100% - 301px);
+    width: calc(100% - 350px);
 }
 
 .actionsNavBar {
