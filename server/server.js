@@ -283,6 +283,38 @@ module.exports = function(port, db, githubAuthoriser) {
         });
     });
 
+    app.put("/api/groups/:id", function(req, res) {
+        var groupID = req.params.id;
+        var groupInfo = req.body.groupInfo;
+        var newUsers = req.body.newUsers;
+        var queryObject = {_id: groupID};
+        groups.find(queryObject).limit(1).next().then(function(group) {
+            if (group) {
+                var updateObject = {};
+                if (newUsers) {
+                    updateObject.$addToSet = {users: {$each: newUsers}};
+                }
+                if (groupInfo) {
+                    updateObject.$set = {};
+                    for (var item in groupInfo) {
+                        // Don't update any fields that don't exist, the _id field (locked), or the users field
+                        // (limited access)
+                        if (group[item] && item !== "_id" && item !== "users") {
+                            updateObject.$set[item] = groupInfo[item];
+                        }
+                    }
+                }
+                return groups.updateOne(queryObject, updateObject).then(function(updatedGroup) {
+                    res.json(cleanIdField(updatedGroup));
+                });
+            } else {
+                res.sendStatus(404);
+            }
+        }).catch(function(err) {
+            res.sendStatus(500);
+        });
+    });
+
     // Returns a copy of the input with the "_id" field renamed to "id"
     function cleanIdField(obj) {
         var cleanObj = {};
