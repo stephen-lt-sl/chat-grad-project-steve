@@ -288,23 +288,27 @@ module.exports = function(port, db, githubAuthoriser) {
         var queryObject = {_id: groupID};
         groups.find(queryObject).limit(1).next().then(function(group) {
             if (group) {
-                var updateObject = {};
-                if (newUsers) {
-                    updateObject.$addToSet = {users: {$each: newUsers}};
-                }
-                if (groupInfo) {
-                    updateObject.$set = {};
-                    for (var item in groupInfo) {
-                        // Don't update any fields that don't exist, the _id field (locked), or the users field
-                        // (limited access)
-                        if (group[item] && item !== "_id" && item !== "users") {
-                            updateObject.$set[item] = groupInfo[item];
+                if (group.users.indexOf(req.session.user) !== -1) {
+                    var updateObject = {};
+                    if (newUsers) {
+                        updateObject.$addToSet = {users: {$each: newUsers}};
+                    }
+                    if (groupInfo) {
+                        updateObject.$set = {};
+                        for (var item in groupInfo) {
+                            // Don't update any fields that don't exist, the _id field (locked), or the users field
+                            // (limited access)
+                            if (group[item] && item !== "_id" && item !== "users") {
+                                updateObject.$set[item] = groupInfo[item];
+                            }
                         }
                     }
+                    return groups.findOneAndUpdate(queryObject, updateObject).then(function(updateResult) {
+                        res.json(cleanIdField(updateResult.value));
+                    });
+                } else {
+                    res.sendStatus(403);
                 }
-                return groups.updateOne(queryObject, updateObject).then(function(updatedGroup) {
-                    res.json(cleanIdField(updatedGroup));
-                });
             } else {
                 res.sendStatus(404);
             }
