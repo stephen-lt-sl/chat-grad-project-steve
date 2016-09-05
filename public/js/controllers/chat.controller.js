@@ -15,7 +15,7 @@
         vm.conversations = {};
         vm.users = [];
 
-        vm.openConversation = openConversation;
+        vm.toggleConversation = toggleConversation;
         vm.sendMessage = sendMessage;
 
         vm.getUserName = getUserName;
@@ -140,35 +140,37 @@
             }
         }
 
-        // Returns a promise whose `then` receives the conversation with the recipient, and whose `catch` receives
-        // the failed response from the server
-        function setupConversation(recipientID) {
-            return chatDataService.getConversation(recipientID).then(function(conversationResponse) {
-                return conversationResponse;
-            }).catch(function() {
-                // Conversation not received, create new conversation with recipient
-                return chatDataService.createConversation(recipientID);
-            }).then(function(conversationResponse) {
-                return conversationResponse.data;
-            }).catch(function(errorResponse) {
-                console.log("Failed to setup conversation. Server returned code " + errorResponse.status + ".");
-                return errorResponse;
-            });
-        }
-
-        // Gets the conversation with the given recipient from the server, or creates a new conversation with the
-        // recipient on the server if it does not already exist; afterwards the conversation is displayed in the client
-        function openConversation(recipientID) {
-            setupConversation(recipientID).then(function(conversation) {
-                displayConversation(conversation);
-            });
-        }
-        // Similar to `openConversation`, but assumes the conversation already exists and is being displayed, and is
-        // used to update the conversation from the server (including fetching messages)
+        // If the conversation with the given ID exists in the client, updates the conversation from the server
+        // (including fetching messages)
         function refreshConversation(conversationID) {
+            if (!vm.conversations[conversationID]) {
+                return Promise.reject();
+            }
             var recipientID = getOtherID(vm.conversations[conversationID].data);
             return chatDataService.getConversation(recipientID).then(function(conversationResponse) {
                 displayConversation(conversationResponse.data);
+            });
+        }
+
+        function closeConversation(conversationID) {
+            delete vm.conversations[conversationID];
+        }
+
+        function toggleConversation(recipientID) {
+            return chatDataService.getConversation(recipientID).then(function(conversationResponse) {
+                if (vm.conversations[conversationResponse.data.id]) {
+                    closeConversation(conversationResponse.data.id);
+                } else {
+                    displayConversation(conversationResponse.data);
+                }
+                return conversationResponse;
+            }).catch(function() {
+                return chatDataService.createConversation(recipientID).then(function(conversationResponse) {
+                    displayConversation(conversationResponse.data);
+                });
+            }).catch(function(errorResponse) {
+                console.log("Failed to setup conversation. Server returned code " + errorResponse.status + ".");
+                return errorResponse;
             });
         }
 
