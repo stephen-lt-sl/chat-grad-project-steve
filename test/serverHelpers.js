@@ -46,6 +46,11 @@ function setupDB() {
             find: sinon.stub(),
             updateOne: sinon.stub(),
             deleteOne: sinon.stub()
+        },
+        groups: {
+            find: sinon.stub(),
+            insertOne: sinon.stub(),
+            updateOne: sinon.stub()
         }
     };
     dbCursors = {};
@@ -70,6 +75,7 @@ function setupDB() {
     db.collection.withArgs("conversations").returns(dbCollections.conversations);
     db.collection.withArgs("messages").returns(dbCollections.messages);
     db.collection.withArgs("notifications").returns(dbCollections.notifications);
+    db.collection.withArgs("groups").returns(dbCollections.groups);
 }
 function setupAuthentication() {
     cookieJar = request.jar();
@@ -277,4 +283,20 @@ module.exports.getNotifications = function(conversationID, queryParams) {
         requestObject.qs = queryParams;
     }
     return request(requestObject);
+};
+module.exports.postGroup = function(name, description) {
+    var requestUrl = baseUrl + "/api/groups";
+    return request.post({
+        url: requestUrl,
+        headers: {
+            "Content-type": "application/json"
+        },
+        body: JSON.stringify({
+            name: name,
+            description: description
+        }),
+        jar: cookieJar,
+        simple: false,
+        resolveWithFullResponse: true
+    });
 };

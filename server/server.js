@@ -278,6 +278,8 @@ module.exports = function(port, db, githubAuthoriser) {
             } else {
                 res.sendStatus(409);
             }
+        }).catch(function(err) {
+            res.sendStatus(500);
         });
     });
 
