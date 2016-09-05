@@ -454,26 +454,6 @@ describe("server", function() {
                 });
             }
         );
-        it("attempts to upsert 'new_messages' notification using correct timestamps if messages is successfully " +
-            "added", function() {
-                var beforeTimestamp;
-                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("conversations", true, testConversation);
-                    helpers.setInsertOneResult("messages", true, testMessage);
-                    beforeTimestamp = new Date();
-                    return helpers.postMessage(testMessage.conversationID, testMessage.contents);
-                }).then(function(response) {
-                    var afterTimestamp = new Date();
-                    assert.equal(helpers.getUpdateOneCallCount("notifications"), 2);
-                    // Verify that server has generated valid timestamp values
-                    var firstTimestamp = helpers.getUpdateOneArgs("notifications", 0)[1].$set["data.since"];
-                    var secondTimestamp = helpers.getUpdateOneArgs("notifications", 1)[1].$set["data.since"];
-                    assert.isAtLeast(firstTimestamp.getTime(), beforeTimestamp.getTime());
-                    assert.isAtMost(firstTimestamp.getTime(), afterTimestamp.getTime());
-                    assert.equal(firstTimestamp, secondTimestamp);
-                });
-            }
-        );
         it("attempts to upsert 'new_messages' notification for each participant if message is successfully added",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
@@ -482,7 +462,6 @@ describe("server", function() {
                     return helpers.postMessage(testMessage.conversationID, testMessage.contents);
                 }).then(function(response) {
                     assert.equal(helpers.getUpdateOneCallCount("notifications"), 2);
-                    var timestamp = helpers.getUpdateOneArgs("notifications", 0)[1].$set["data.since"];
                     // Verify that notification upserts have been performed with correct values
                     // Query values
                     var upsertQuery = {
@@ -496,7 +475,7 @@ describe("server", function() {
                             userID: "bob",
                             type: "new_messages",
                             "data.conversationID": testMessage.conversationID,
-                            "data.since": timestamp,
+                            "data.since": testMessage.timestamp,
                             "data.otherID": "charlie"
                         },
                         $inc: {
@@ -548,20 +527,17 @@ describe("server", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation);
                     helpers.setInsertOneResult("messages", true, testMessage);
-                    beforeTimestamp = new Date();
                     return helpers.postMessage(testMessage.conversationID, testMessage.contents);
                 }).then(function(response) {
-                    var afterTimestamp = new Date();
                     assert.equal(helpers.getUpdateOneCallCount("conversations"), 1);
                     var updateQuery = helpers.getUpdateOneArgs("conversations", 0)[0];
                     var updateObject = helpers.getUpdateOneArgs("conversations", 0)[1];
                     assert.deepEqual(updateQuery, {
                         _id: testMessage.conversationID
                     });
-                    assert.isDefined(updateObject.$set);
-                    var updateTimestamp = updateObject.$set.lastTimestamp;
-                    assert.isAtLeast(updateTimestamp.getTime(), beforeTimestamp.getTime());
-                    assert.isAtMost(updateTimestamp.getTime(), afterTimestamp.getTime());
+                    assert.deepEqual(updateObject, {
+                        $set: {lastTimestamp: testMessage.timestamp}
+                    });
                 });
             }
         );
