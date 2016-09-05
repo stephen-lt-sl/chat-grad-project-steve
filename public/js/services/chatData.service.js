@@ -45,8 +45,12 @@
             });
         }
 
-        function getConversationMessages(conversationID) {
-            return $http.get("/api/messages/" + conversationID);
+        function getConversationMessages(conversationID, params) {
+            if (params) {
+                return $http.get("/api/messages/" + conversationID, {params: params});
+            } else {
+                return $http.get("/api/messages/" + conversationID);
+            }
         }
 
         function submitMessage(conversationID, contents) {

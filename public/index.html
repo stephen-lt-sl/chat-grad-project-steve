@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <title>Chat</title>
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.1/angular.min.js"></script>
-        <script type="text/javascript" src="build/chatApp.min.js"></script>
+        <script type="text/javascript" src="build/chatApp.bundle.js"></script>
     </head>
     <body ng-controller="ChatController as chatVm">
         <a ng-show="!chatVm.loggedIn" href="{{chatVm.loginUri}}">Log in</a>
@@ -14,20 +14,20 @@
                 <h2>List of registered users</h2>
                 <ul>
                     <li ng-repeat="user in chatVm.users">
-                        {{user.name}} - <a href="" ng-click="chatVm.openConversation(user.id)">(Chat)</a>
+                        {{user.data.name}} - <a href="" ng-click="chatVm.openConversation(user.data.id)">(Chat)</a> ({{user.unreadMessageCount}} unread)
                     </li>
                 </ul>
             </div>
             <div class="verticalDivider"></div>
             <div class="conversationsSection">
-                <div ng-repeat="(idx, conversation) in chatVm.conversations track by $index"
+                <div ng-repeat="conversation in chatVm.getDisplayedConversationsData() track by $index"
                     ng-style="{width: chatVm.getSize('width'), height: chatVm.getSize('totalHeight')}" class="conversationBox">
                     <div ng-style="{height: chatVm.getSize('header')}" class="conversationHeader">
                         <b>{{chatVm.conversationName(conversation)}}</b>
                     </div>
                     <div ng-style="{height: chatVm.getSize('messages'), 'max-height': chatVm.getSize('messages')}" class="conversationMessageBox" chat-tracking-scroll-box>
                         <div style="height:5px;"></div>
-                        <div ng-repeat="message in conversation.messages" style="width:100%;">
+                        <div ng-repeat="message in chatVm.conversations[conversation.id].messages" style="width:100%;">
                             <span style="font-weight: bold;">
                                 {{chatVm.getUserName(message.senderID)}}
                                 <span style="font-style: italic;">{{chatVm.timestampString(message.timestamp)}}</span>:
@@ -35,8 +35,8 @@
                             <span style="">{{message.contents}}</span>
                         </div>
                     </div>
-                    <form ng-style="{height: chatVm.getSize('send')}" id="message-form" ng-submit="chatVm.sendMessage(idx)" class="conversationSendForm">
-                        <input id="new-message" ng-model="conversation.messageEntryText" placeholder="New message..."
+                    <form ng-style="{height: chatVm.getSize('send')}" id="message-form" ng-submit="chatVm.sendMessage(conversation.id)" class="conversationSendForm">
+                        <input id="new-message" ng-model="chatVm.conversations[conversation.id].messageEntryText" placeholder="New message..."
                             class="conversationSendFormInput" ng-style="{width: chatVm.getSize('sendBoxWidth')}">
                         <input id="send-message" type="submit" value="Send" class="button conversationSendFormButton" ng-style="{width: chatVm.getSize('buttonWidth')}">
                     </form>
