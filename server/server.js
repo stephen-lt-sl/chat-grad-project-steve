@@ -14,6 +14,7 @@ module.exports = function(port, db, githubAuthoriser) {
     var users = db.collection("users");
     var conversations = db.collection("conversations");
     var messages = db.collection("messages");
+    var notifications = db.collection("notifications");
     var sessions = {};
 
     app.get("/oauth", function(req, res) {
@@ -139,11 +140,47 @@ module.exports = function(port, db, githubAuthoriser) {
         });
     });
 
+    // Update the conversation timestamp
+    function updateConversation(conversation, message) {
+        conversations.updateOne({
+            _id: conversation._id
+        }, {
+            $set: {lastTimestamp: message.timestamp}
+        });
+    }
+
+    // Insert a "new_messages" notification for each participant, or if such a notification already exists then
+    // increment the messageCount
+    function addNewMessageNotification(conversation, message) {
+        conversation.participants.forEach(function(participant) {
+            notifications.updateOne({
+                userID: participant,
+                type: "new_messages",
+                "data.conversationID": conversation._id
+            }, {
+                $set: {
+                    userID: participant,
+                    type: "new_messages",
+                    "data.conversationID": conversation._id,
+                    "data.since": message.timestamp,
+                    "data.otherID": conversation.participants.filter(function(otherParticipant) {
+                        return otherParticipant !== participant;
+                    })[0]
+                },
+                $inc: {
+                    "data.messageCount": 1
+                }
+            }, {
+                upsert: true
+            });
+        });
+    }
+
     app.post("/api/messages", function(req, res) {
         var senderID = req.session.user;
         var conversationID = req.body.conversationID;
-        var message = req.body.contents;
-        if (message === "") {
+        var contents = req.body.contents;
+        if (contents === "") {
             res.sendStatus(201);
             return;
         }
@@ -158,15 +195,13 @@ module.exports = function(port, db, githubAuthoriser) {
                 messages.insertOne({
                     senderID: senderID,
                     conversationID: conversationID,
-                    contents: message,
+                    contents: contents,
                     timestamp: timestamp
                 }).then(function(result) {
-                    conversations.updateOne({
-                        _id: conversationID
-                    }, {
-                        $set: {lastTimestamp: timestamp}
-                    });
-                    res.json(cleanIdField(result.ops[0]));
+                    var message = result.ops[0];
+                    updateConversation(conversation, message);
+                    addNewMessageNotification(conversation, message);
+                    res.json(cleanIdField(message));
                 }).catch(function(err) {
                     res.sendStatus(500);
                 });
@@ -195,21 +230,29 @@ module.exports = function(port, db, githubAuthoriser) {
                     queryObject.timestamp = {$gt: new Date(lastTimestamp)};
                 }
                 if (countOnly) {
-                    messages.count(queryObject).then(function(count) {
+                    return messages.count(queryObject).then(function(count) {
                         res.json({count: count});
-                    }).catch(function(err) {
-                        res.sendStatus(500);
                     });
                 } else {
-                    messages.find(queryObject).toArray().then(function(docs) {
+                    return messages.find(queryObject).toArray().then(function(docs) {
+                        clearNotification(senderID, "new_messages", {conversationID: conversationID});
                         res.json(docs.map(cleanIdField));
-                    }).catch(function(err) {
-                        res.sendStatus(500);
                     });
                 }
             } else {
                 res.sendStatus(403);
             }
+        }).catch(function(err) {
+            res.sendStatus(500);
+        });
+    });
+
+    app.get("/api/notifications", function(req, res) {
+        var userID = req.session.user;
+        notifications.find({
+            userID: userID
+        }).toArray().then(function(docs) {
+            res.json(docs.map(cleanIdField));
         }).catch(function(err) {
             res.sendStatus(500);
         });
@@ -226,6 +269,17 @@ module.exports = function(port, db, githubAuthoriser) {
             }
         }
         return cleanObj;
+    }
+
+    function clearNotification(userID, type, data) {
+        var notificationQuery = {
+            userID: userID,
+            type: type
+        };
+        for (var key in data) {
+            notificationQuery["data." + key] = data[key];
+        }
+        notifications.deleteOne(notificationQuery);
     }
 
     return app.listen(port);

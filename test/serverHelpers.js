@@ -41,6 +41,11 @@ function setupDB() {
             find: sinon.stub(),
             insertOne: sinon.stub(),
             count: sinon.stub()
+        },
+        notifications: {
+            find: sinon.stub(),
+            updateOne: sinon.stub(),
+            deleteOne: sinon.stub()
         }
     };
     dbCursors = {};
@@ -64,6 +69,7 @@ function setupDB() {
     db.collection.withArgs("users").returns(dbCollections.users);
     db.collection.withArgs("conversations").returns(dbCollections.conversations);
     db.collection.withArgs("messages").returns(dbCollections.messages);
+    db.collection.withArgs("notifications").returns(dbCollections.notifications);
 }
 function setupAuthentication() {
     cookieJar = request.jar();
@@ -119,6 +125,16 @@ module.exports.setInsertOneResult = function(collection, success, result, callNu
     var dbCursorCall = callNum === undefined ? dbCursor : dbCursor.onCall(callNum);
     dbCursorCall.returns(success ? Promise.resolve({ops: [result]}) : Promise.reject(result));
 };
+module.exports.setUpdateOneResult = function(collection, success, result, callNum) {
+    var dbCursor = dbCollections[collection].updateOne;
+    var dbCursorCall = callNum === undefined ? dbCursor : dbCursor.onCall(callNum);
+    dbCursorCall.returns(success ? Promise.resolve(result) : Promise.reject(result));
+};
+module.exports.setDeleteOneResult = function(collection, success, result, callNum) {
+    var dbCursor = dbCollections[collection].deleteOne;
+    var dbCursorCall = callNum === undefined ? dbCursor : dbCursor.onCall(callNum);
+    dbCursorCall.returns(success ? Promise.resolve(result) : Promise.reject(result));
+};
 module.exports.setCountResult = function(collection, success, result, callNum) {
     var dbCursor = dbCollections[collection].count;
     var dbCursorCall = callNum === undefined ? dbCursor : dbCursor.onCall(callNum);
@@ -137,6 +153,9 @@ module.exports.getInsertOneCallCount = function(collection) {
 module.exports.getUpdateOneCallCount = function(collection) {
     return dbCollections[collection].updateOne.callCount;
 };
+module.exports.getDeleteOneCallCount = function(collection) {
+    return dbCollections[collection].deleteOne.callCount;
+};
 module.exports.getCountCallCount = function(collection) {
     return dbCollections[collection].count.callCount;
 };
@@ -149,6 +168,9 @@ module.exports.getInsertOneArgs = function(collection, callNum) {
 };
 module.exports.getUpdateOneArgs = function(collection, callNum) {
     return dbCollections[collection].updateOne.getCall(callNum).args;
+};
+module.exports.getDeleteOneArgs = function(collection, callNum) {
+    return dbCollections[collection].deleteOne.getCall(callNum).args;
 };
 module.exports.getCountArgs = function(collection, callNum) {
     return dbCollections[collection].count.getCall(callNum).args;
@@ -232,6 +254,19 @@ module.exports.postMessage = function(conversationID, contents) {
 };
 module.exports.getMessages = function(conversationID, queryParams) {
     var requestUrl = baseUrl + "/api/messages/" + conversationID;
+    var requestObject = {
+        url: requestUrl,
+        jar: cookieJar,
+        simple: false,
+        resolveWithFullResponse: true
+    };
+    if (queryParams) {
+        requestObject.qs = queryParams;
+    }
+    return request(requestObject);
+};
+module.exports.getNotifications = function(conversationID, queryParams) {
+    var requestUrl = baseUrl + "/api/notifications";
     var requestObject = {
         url: requestUrl,
         jar: cookieJar,

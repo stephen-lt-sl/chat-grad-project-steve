@@ -15,7 +15,8 @@
             getConversation: getConversation,
             createConversation: createConversation,
             getConversationMessages: getConversationMessages,
-            submitMessage: submitMessage
+            submitMessage: submitMessage,
+            getNotifications: getNotifications
         };
 
         function getSelf() {
@@ -65,6 +66,10 @@
                     conversationID: conversationID
                 })
             });
+        }
+
+        function getNotifications() {
+            return $http.get("/api/notifications/");
         }
     }
 })();

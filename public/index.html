@@ -14,7 +14,7 @@
                 <h2>List of registered users</h2>
                 <ul>
                     <li ng-repeat="user in chatVm.users">
-                        {{user.data.name}} - <a href="" ng-click="chatVm.openConversation(user.data.id)">(Chat)</a> ({{user.unreadMessageCount}} unread)
+                        {{user.data.name}} - <a href="" ng-click="chatVm.toggleConversation(user.data.id)">(Chat)</a> ({{user.unreadMessageCount}} unread)
                     </li>
                 </ul>
             </div>
