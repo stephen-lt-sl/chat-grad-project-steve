@@ -465,50 +465,44 @@ describe("server", function() {
                 }).then(function(response) {
                     var afterTimestamp = new Date();
                     assert.equal(helpers.getUpdateOneCallCount("notifications"), 2);
+                    // Verify that server has generated valid timestamp values
                     var firstTimestamp = helpers.getUpdateOneArgs("notifications", 0)[1].$set["data.since"];
                     var secondTimestamp = helpers.getUpdateOneArgs("notifications", 1)[1].$set["data.since"];
                     assert.isAtLeast(firstTimestamp.getTime(), beforeTimestamp.getTime());
                     assert.isAtMost(firstTimestamp.getTime(), afterTimestamp.getTime());
                     assert.equal(firstTimestamp, secondTimestamp);
-                    assert.deepEqual(helpers.getUpdateOneArgs("notifications", 0), [
-                        {
+                    // Verify that notification upserts have been performed with correct values
+                    // Query values
+                    var upsertQuery = {
+                        userID: "bob",
+                        type: "new_messages",
+                        "data.conversationID": testMessage.conversationID
+                    };
+                    // Update values
+                    var upsertValue = {
+                        $set: {
                             userID: "bob",
                             type: "new_messages",
-                            "data.conversationID": testMessage.conversationID
-                        }, {
-                            $set: {
-                                userID: "bob",
-                                type: "new_messages",
-                                "data.conversationID": testMessage.conversationID,
-                                "data.since": firstTimestamp,
-                                "data.otherID": "charlie"
-                            },
-                            $inc: {
-                                "data.messageCount": 1
-                            }
-                        }, {
-                            upsert: true
+                            "data.conversationID": testMessage.conversationID,
+                            "data.since": firstTimestamp,
+                            "data.otherID": "charlie"
+                        },
+                        $inc: {
+                            "data.messageCount": 1
                         }
+                    };
+                    // Options
+                    var upsertOptions = {
+                        upsert: true
+                    };
+                    assert.deepEqual(helpers.getUpdateOneArgs("notifications", 0), [
+                        upsertQuery, upsertValue, upsertOptions
                     ]);
+                    upsertQuery.userID = "charlie";
+                    upsertValue.$set.userID = "charlie";
+                    upsertValue.$set["data.otherID"] = "bob";
                     assert.deepEqual(helpers.getUpdateOneArgs("notifications", 1), [
-                        {
-                            userID: "charlie",
-                            type: "new_messages",
-                            "data.conversationID": testMessage.conversationID
-                        }, {
-                            $set: {
-                                userID: "charlie",
-                                type: "new_messages",
-                                "data.conversationID": testMessage.conversationID,
-                                "data.since": firstTimestamp,
-                                "data.otherID": "bob"
-                            },
-                            $inc: {
-                                "data.messageCount": 1
-                            }
-                        }, {
-                            upsert: true
-                        }
+                        upsertQuery, upsertValue, upsertOptions
                     ]);
                 });
             }
