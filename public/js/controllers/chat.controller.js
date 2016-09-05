@@ -76,17 +76,13 @@
                     return refreshConversation(notificationData.conversationID);
                 } else {
                     // Otherwise set the unread message count for the user
-                    return chatDataService.getConversationMessages(notificationData.conversationID, {
-                        countOnly: true,
-                        timestamp: notificationData.since
-                    }).then(function(countResponse) {
-                        var userIdx = vm.users.findIndex(function(currentUser) {
-                            return currentUser.data.id === notificationData.otherID;
-                        });
-                        if (userIdx !== -1) {
-                            vm.users[userIdx].unreadMessageCount = countResponse.data.count;
-                        }
+                    var userIdx = vm.users.findIndex(function(currentUser) {
+                        return currentUser.data.id === notificationData.otherID;
                     });
+                    if (userIdx !== -1) {
+                        vm.users[userIdx].unreadMessageCount = notificationData.messageCount;
+                    }
+                    return Promise.resolve();
                 }
             }
         };
@@ -95,39 +91,18 @@
         // notification, but should not make any changes if the server has not changed state since the notification was
         // generated
         function processNotification(notification) {
-            return notificationHandler[notification.type](notification.data);
+            if (notificationHandler[notification.type]) {
+                return notificationHandler[notification.type](notification.data);
+            } else {
+                return Promise.reject(notification);
+            }
         }
 
         // Checks for new messages in any of the user's conversations (active or otherwise), and calls
         // `processNotification` to resolve to an action if either has
         function pollNotifications() {
-            var pollPromises = [];
-            var notifications = [];
-            vm.users.forEach(function(user) {
-                pollPromises.push(chatDataService.getConversation(user.data.id).then(function(conversationResponse) {
-                    var newTimestamp = conversationResponse.data.lastTimestamp || "1970-1-1";
-                    var currentTimestamp = vm.conversations[conversationResponse.data.id] ?
-                        vm.conversations[conversationResponse.data.id].data.lastTimestamp || "1970-1-1" :
-                        user.lastReadTimestamp;
-                    if (Date.parse(currentTimestamp) < Date.parse(newTimestamp)) {
-                        console.log("New notification");
-                        var notification = {
-                            type: "new_messages",
-                            data: {
-                                conversationID: conversationResponse.data.id,
-                                messageCount: 0,
-                                otherID: getOtherID(conversationResponse.data),
-                                since: currentTimestamp
-                            }
-                        };
-                        notifications.push(notification);
-                    }
-                }).catch(function(errorResponse) {
-                    return errorResponse;
-                }));
-            });
-            return Promise.all(pollPromises).then(function() {
-                notifications.forEach(function(notification) {
+            return chatDataService.getNotifications().then(function(notificationResponse) {
+                notificationResponse.data.forEach(function(notification) {
                     processNotification(notification);
                 });
             });
