@@ -168,7 +168,8 @@ module.exports = function(port, db, githubAuthoriser) {
                     }, {
                         $set: {lastTimestamp: timestamp}
                     });
-                    // Upsert a "new_messages" notification for each participant
+                    // Insert a "new_messages" notification for each participant, or if such a notification exists then
+                    // increment the messageCount
                     conversation.participants.forEach(function(participant) {
                         notifications.updateOne({
                             userID: participant,
