@@ -30,17 +30,19 @@
                         </ul>
                     </nav>
                 </div>
-                <chat-conversations-section
-                    conversation-controls="chatVm.conversationControls"
-                    notification-handlers="chatVm.notificationHandlers"
-                    set-messages-unread="chatVm.setMessagesUnread(otherID, messageCount)"
-                    get-user-name="chatVm.getUserName(userID)"
-                    user="chatVm.user"
-                    ng-show="chatVm.currentActionsSection === 'conversations'">
-                </chat-conversations-section>
-                <chat-groups-section
-                    ng-show="chatVm.currentActionsSection === 'groups'">
-                </chat-groups-section>
+                <div class="actionsContainer">
+                    <chat-conversations-section
+                        conversation-controls="chatVm.conversationControls"
+                        notification-handlers="chatVm.notificationHandlers"
+                        set-messages-unread="chatVm.setMessagesUnread(otherID, messageCount)"
+                        get-user-name="chatVm.getUserName(userID)"
+                        user="chatVm.user"
+                        ng-show="chatVm.currentActionsSection === 'conversations'">
+                    </chat-conversations-section>
+                    <chat-groups-section
+                        ng-show="chatVm.currentActionsSection === 'groups'">
+                    </chat-groups-section>
+                </div>
             </div>
         </div>
     </body>
