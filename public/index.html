@@ -26,6 +26,7 @@
                     <nav>
                         <ul>
                             <li><a href="#" ng-click="chatVm.setCurrentActionsSection('conversations')">Conversations</a></li>
+                            <li><a href="#" ng-click="chatVm.setCurrentActionsSection('groups')">Groups</a></li>
                         </ul>
                     </nav>
                 </div>
@@ -37,6 +38,9 @@
                     user="chatVm.user"
                     ng-show="chatVm.currentActionsSection === 'conversations'">
                 </chat-conversations-section>
+                <chat-groups-section
+                    ng-show="chatVm.currentActionsSection === 'groups'">
+                </chat-groups-section>
             </div>
         </div>
     </body>
