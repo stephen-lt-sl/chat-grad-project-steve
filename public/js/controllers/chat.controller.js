@@ -89,7 +89,7 @@
             vm.currentActionsSection = section;
         }
 
-        function setMessagesUnread (otherID, messageCount) {
+        function setMessagesUnread(otherID, messageCount) {
             var otherIdx = vm.users.findIndex(function(user) {
                 return user.data.id === otherID;
             });

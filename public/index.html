@@ -33,7 +33,7 @@
                     conversation-controls="chatVm.conversationControls"
                     notification-handlers="chatVm.notificationHandlers"
                     set-messages-unread="chatVm.setMessagesUnread(otherID, messageCount)"
-                    get-user-name:="chatVm.getUserName(userID)"
+                    get-user-name="chatVm.getUserName(userID)"
                     user="chatVm.user"
                     ng-show="chatVm.currentActionsSection === 'conversations'">
                 </chat-conversations-section>
