@@ -44,33 +44,35 @@
             });
         }
 
-        // Set of functions for handling different notification types
-        var notificationHandler = {
-            "new_messages": function(notificationData) {
-                if (vm.conversations[notificationData.conversationID]) {
-                    // If we have the conversation open, refresh it
-                    return refreshConversation(notificationData.conversationID);
-                } else {
-                    // Otherwise set the unread message count for the user
-                    var userIdx = vm.users.findIndex(function(currentUser) {
-                        return currentUser.data.id === notificationData.otherID;
-                    });
-                    if (userIdx !== -1) {
-                        vm.users[userIdx].unreadMessageCount = notificationData.messageCount;
-                    }
-                    return Promise.resolve();
+        var newMessagesListener = function(notificationData) {
+            if (vm.conversations[notificationData.conversationID]) {
+                // If we have the conversation open, refresh it
+                return refreshConversation(notificationData.conversationID);
+            } else {
+                // Otherwise set the unread message count for the user
+                var userIdx = vm.users.findIndex(function(currentUser) {
+                    return currentUser.data.id === notificationData.otherID;
+                });
+                if (userIdx !== -1) {
+                    vm.users[userIdx].unreadMessageCount = notificationData.messageCount;
                 }
+                return Promise.resolve();
             }
+        };
+
+        // Set of function listeners for handling different notification types
+        var notificationHandlers = {
+            "new_messages": [newMessagesListener]
         };
 
         // Performs an action based on the received notification; this action does not necessarily "resolve" the
         // notification, but should not make any changes if the server has not changed state since the notification was
         // generated
         function processNotification(notification) {
-            if (notificationHandler[notification.type]) {
-                return notificationHandler[notification.type](notification.data);
-            } else {
-                return Promise.reject(notification);
+            if (notificationHandlers[notification.type]) {
+                notificationHandlers[notification.type].forEach(function(notificationHandler) {
+                    notificationHandler(notification.data);
+                });
             }
         }
 
