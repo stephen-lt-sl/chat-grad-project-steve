@@ -11,12 +11,14 @@
         <section ng-show="chatVm.loggedIn" style="height:500px">
             <div class="usersSection">
                 <p>Logged in as {{chatVm.user.name}}.</p>
-                <h2>List of registered users</h2>
-                <ul>
-                    <li ng-repeat="user in chatVm.users">
-                        {{user.data.name}} - <a href="" ng-click="chatVm.toggleConversation(user.data.id)">(Chat)</a> ({{user.unreadMessageCount}} unread)
-                    </li>
-                </ul>
+                <div class="usersSection">
+                    <h2>List of registered users</h2>
+                    <ul>
+                        <li ng-repeat="user in chatVm.users">
+                            {{user.data.name}} - <a href="" ng-click="chatVm.toggleConversation(user.data.id)">(Chat)</a> ({{user.unreadMessageCount}} unread)
+                        </li>
+                    </ul>
+                </div>
             </div>
             <div class="verticalDivider"></div>
             <div class="conversationsSection">
