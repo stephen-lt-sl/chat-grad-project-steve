@@ -8,8 +8,8 @@
     </head>
     <body ng-controller="ChatController as chatVm">
         <a ng-show="!chatVm.loggedIn" href="{{chatVm.loginUri}}">Log in</a>
-        <section ng-show="chatVm.loggedIn" style="height:500px">
-            <div class="usersSection">
+        <div ng-show="chatVm.loggedIn" class="chatAppDisplay">
+            <div class="chatSelectSection">
                 <p>Logged in as {{chatVm.user.name}}.</p>
                 <div class="usersSection">
                     <h2>List of registered users</h2>
@@ -21,7 +21,14 @@
                 </div>
             </div>
             <div class="verticalDivider"></div>
-            <div class="conversationsSection">
+            <div class="actionsSection">
+                <div class="actionsNavBar">
+                    <nav>
+                        <ul>
+                            <li><a href="#">Conversations</a></li>
+                        </ul>
+                    </nav>
+                </div>
                 <div ng-repeat="conversation in chatVm.getDisplayedConversationsData() track by $index"
                     ng-style="{width: chatVm.getSize('width'), height: chatVm.getSize('totalHeight')}" class="conversationBox">
                     <div ng-style="{height: chatVm.getSize('header')}" class="conversationHeader">
@@ -44,6 +51,6 @@
                     </form>
                 </div>
             </div>
-        </section>
+        </div>
     </body>
 </html>
