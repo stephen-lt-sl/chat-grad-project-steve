@@ -265,19 +265,17 @@ module.exports = function(port, db, githubAuthoriser) {
         groups.find({
             name: groupInfo.name
         }).limit(1).next().then(function(group) {
-            if (!group) {
-                groups.insertOne({
-                    name: groupInfo.name,
-                    description: groupInfo.description,
-                    users: [creatorID]
-                }).then(function(result) {
-                    res.json(cleanIdField(result.ops[0]));
-                }).catch(function(err) {
-                    res.sendStatus(500);
-                });
-            } else {
+            if (group) {
                 res.sendStatus(409);
+                return Promise.resolve();
             }
+            return groups.insertOne({
+                name: groupInfo.name,
+                description: groupInfo.description,
+                users: [creatorID]
+            }).then(function(result) {
+                res.json(cleanIdField(result.ops[0]));
+            });
         }).catch(function(err) {
             res.sendStatus(500);
         });
