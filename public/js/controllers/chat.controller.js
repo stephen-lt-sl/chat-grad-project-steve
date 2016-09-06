@@ -225,9 +225,7 @@
             });
         }
 
-        function sendMessage(conversationID) {
-            var contents = vm.conversations[conversationID].messageEntryText;
-            vm.conversations[conversationID].messageEntryText = "";
+        function sendMessage(conversationID, contents) {
             chatDataService.submitMessage(conversationID, contents).then(function(messageAddResult) {
                 refreshConversation(conversationID);
             });
