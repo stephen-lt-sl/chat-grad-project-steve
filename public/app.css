@@ -1,19 +1,70 @@
-.usersSection {
+html, body {
+    padding: 0px;
+    margin: 0px;
+    height: 100%;
+}
+
+.chatAppDisplay {
+    height: 100%;
+}
+
+.chatSelectSection {
     float: left;
-    width: 200px;
-    padding: 10px 35px 100px 15px;
+    width: 280px;
+    padding: 0px 5px 100px 15px;
 }
 
 .verticalDivider {
     float: left;
     border-right: 1px solid #000000;
     height: 100%;
-    min-width: 50px;
-    margin-right: 35px;
+    min-width: 49px;
 }
 
-.conversationsSection {
+.actionsSection {
     float: left;
+    width: calc(100% - 350px);
+}
+
+.actionsNavBar {
+    background-color: rgba(0, 48, 128, 0.1);
+    width: 100%;
+}
+
+.actionsNavBar nav {
+    margin: 0;
+    padding: 0;
+    height: 36px;
+    width: 100%;
+}
+
+.actionsNavBar nav ul {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.actionsNavBar nav ul li {
+    background-color: rgba(0, 48, 128, 0.1);
+    display: inline;
+    float: left;
+    border-width: 0px 2px 1px 0px;
+    border-style: solid;
+    border-color: rgba(0, 48, 128, 0.5);
+    transition: all linear 0.3s;
+}
+
+.actionsNavBar nav ul li:hover {
+    background-color: rgba(0, 48, 128, 0.5);
+    transition: all linear 0.0s;
+}
+
+.actionsNavBar nav ul li a {
+    display: block;
+    color: rgba(0, 0, 0, 0.8);
+    height: 18px;
+    padding: 8px 16px;
+    text-decoration: none;
 }
 
 .conversationBox {
