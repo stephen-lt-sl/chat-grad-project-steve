@@ -25,8 +25,12 @@
                 <div class="actionsNavBar">
                     <nav>
                         <ul>
-                            <li><a href="#" ng-click="chatVm.setCurrentActionsSection('conversations')">Conversations</a></li>
-                            <li><a href="#" ng-click="chatVm.setCurrentActionsSection('groups')">Groups</a></li>
+                            <li ng-class="{selectedActionSection: chatVm.currentActionsSection === 'conversations'}">
+                                <a href="#" ng-click="chatVm.setCurrentActionsSection('conversations')">Conversations</a>
+                            </li>
+                            <li ng-class="{selectedActionSection: chatVm.currentActionsSection === 'groups'}">
+                                <a href="#" ng-click="chatVm.setCurrentActionsSection('groups')">Groups</a>
+                            </li>
                         </ul>
                     </nav>
                 </div>

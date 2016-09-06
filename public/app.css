@@ -65,6 +65,10 @@ html, body {
     transition: all linear 0.3s;
 }
 
+.actionsNavBar nav ul li.selectedActionSection {
+    background-color: rgba(0, 48, 128, 0.4);
+}
+
 .actionsNavBar nav ul li:hover {
     background-color: rgba(0, 48, 128, 0.5);
     transition: all linear 0.0s;

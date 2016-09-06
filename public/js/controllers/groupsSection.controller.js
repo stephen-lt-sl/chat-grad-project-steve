@@ -10,6 +10,6 @@
     function GroupsSectionController($scope, chatDataService) {
         /* jshint validthis: true */
         var vm = this;
-        
+
     }
 })();
