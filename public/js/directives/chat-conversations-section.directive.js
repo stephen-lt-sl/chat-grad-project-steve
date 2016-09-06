@@ -9,8 +9,9 @@
         return {
             restrict: "E",
             scope: {
-                conversations: "=",
-                sendMessage: "&",
+                conversationControls: "=",
+                notificationHandlers: "=",
+                setMessagesUnread: "&",
                 getUserName: "&",
                 user: "&"
             },
