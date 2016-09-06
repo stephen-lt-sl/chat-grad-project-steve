@@ -1,5 +1,5 @@
 <div class="conversationsSection">
-    <div ng-repeat="conversation in vm.getDisplayedConversationsData()"
+    <div ng-repeat="conversation in vm.getDisplayedConversationsData() track by conversation.id"
         ng-style="{width: vm.getSize('width'), height: vm.getSize('totalHeight')}" class="conversationBox">
         <div ng-style="{height: vm.getSize('header')}" class="conversationHeader">
             <b>{{vm.conversationName(conversation)}}</b>
