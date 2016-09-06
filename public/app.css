@@ -156,8 +156,12 @@ html, body {
     padding-left: 10px;
 }
 
+.groupInfo {
+
+}
+
 .groupDescription {
-    width: calc(100px + 50%);
+    width: calc(50px + 70%);
     max-width: 100%;
 }
 
