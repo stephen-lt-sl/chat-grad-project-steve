@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "preinstall": "bundle install",
     "postinstall": "grunt build",
     "test": "grunt test"
   },
