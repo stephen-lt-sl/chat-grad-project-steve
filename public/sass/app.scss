@@ -8,9 +8,13 @@ html, body {
     height: 100%;
 }
 
+$chat-select-section-width: 300px;
+$actions-section-width: calc(100% - #{$chat-select-section-width + 1px});
+
 .chatSelectSection {
     float: left;
-    width: 280px;
+    box-sizing: border-box;
+    width: $chat-select-section-width;
     padding: 0px 5px 100px 15px;
 }
 
@@ -24,61 +28,65 @@ html, body {
 
 .actionsSection {
     float: left;
-    width: calc(100% - 300px - 1px);
+    box-sizing: border-box;
+    width: $actions-section-width;
     height: 100%;
 }
+
+$action-navbar-height: 36px;
+$actions-container-height: calc(100% - #{$action-navbar-height});
 
 .actionsContainer {
     background-color: rgba(0, 128, 0, 0.1);
     width: 100%;
-    height: calc(100% - 36px);
+    height: $actions-container-height;
 }
 
 .actionsNavBar {
     background-color: rgba(0, 48, 128, 0.1);
     width: 100%;
-}
 
-.actionsNavBar nav {
-    margin: 0;
-    padding: 0;
-    height: 36px;
-    width: 100%;
-}
+    nav {
+        margin: 0;
+        padding: 0;
+        height: $action-navbar-height;
+        width: 100%;
 
-.actionsNavBar nav ul {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
-    height: 100%;
-}
+        ul {
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
 
-.actionsNavBar nav ul li {
-    background-color: rgba(0, 48, 128, 0.1);
-    box-sizing: border-box;
-    display: inline;
-    float: left;
-    border-width: 0px 2px 1px 0px;
-    border-style: solid;
-    border-color: rgba(0, 48, 128, 0.5);
-    height: 100%;
-    transition: all linear 0.3s;
-}
+        li {
+            background-color: rgba(0, 48, 128, 0.1);
+            box-sizing: border-box;
+            display: inline;
+            float: left;
+            border-width: 0px 2px 1px 0px;
+            border-style: solid;
+            border-color: rgba(0, 48, 128, 0.5);
+            height: 100%;
+            transition: all linear 0.3s;
+        }
 
-.actionsNavBar nav ul li.selectedActionSection {
-    background-color: rgba(0, 48, 128, 0.4);
-}
+        li.selectedActionSection {
+            background-color: rgba(0, 48, 128, 0.4);
+        }
 
-.actionsNavBar nav ul li:hover {
-    background-color: rgba(0, 48, 128, 0.5);
-    transition: all linear 0.0s;
-}
+        li:hover {
+            background-color: rgba(0, 48, 128, 0.5);
+            transition: all linear 0.0s;
+        }
 
-.actionsNavBar nav ul li a {
-    display: block;
-    color: rgba(0, 0, 0, 0.8);
-    padding: 8px 16px;
-    text-decoration: none;
+        a {
+            display: block;
+            color: rgba(0, 0, 0, 0.8);
+            padding: 8px 16px;
+            text-decoration: none;
+        }
+    }
 }
 
 .conversationBox {
@@ -118,17 +126,18 @@ html, body {
     box-sizing: border-box;
 }
 
+$group-search-width: 400px;
+$group-details-width: calc(100% - #{$group-search-width + 1px});
+
 .groupsSection {
     height: 100%;
     width: 100%;
-    --search-width: 400px;
-    --details-width: calc(100% - var(--search-width) - 1px);
 }
 
 .groupSearch {
     float: left;
     box-sizing: border-box;
-    width: var(--search-width);
+    width: $group-search-width;
     padding: 5px 20px 0px 5px;
 }
 
@@ -137,9 +146,12 @@ html, body {
     height: 25px;
 }
 
+$group-search-button-width: 50px;
+$group-search-text-width: calc(100% - #{$group-search-button-width});
+
 .groupSearchFormInput {
     box-sizing: border-box;
-    width: calc(100% - 50px);
+    width: $group-search-text-width;
     height: 100%;
 }
 
@@ -147,7 +159,7 @@ html, body {
     float: right;
     box-sizing: border-box;
     padding: 0px;
-    width: 50px;
+    width: $group-search-button-width;
     height: 100%;
 }
 
@@ -155,7 +167,7 @@ html, body {
     background-color: rgba(128, 64, 0, 0.1);
     float: left;
     box-sizing: border-box;
-    width: var(--details-width);
+    width: $group-details-width;
     height: 100%;
     padding-left: 10px;
 }
