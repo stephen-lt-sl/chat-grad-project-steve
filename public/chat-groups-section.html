@@ -1,56 +1,52 @@
 <div class="groupsSection">
     <div class="groupSearch">
         <h3>Search for groups</h3>
-        <form id="group-search-form" class="groupSearchForm">
-            <input id="group-search-form-input" placeholder="Search for..." class="groupSearchFormInput">
+        <form id="group-search-form" class="groupSearchForm" ng-submit="vm.searchForGroups()">
+            <input id="group-search-form-input" ng-model="vm.searchString" placeholder="Search for..." class="groupSearchFormInput">
             <input id="group-search-form-button" type="submit" value="Search" class="button groupSearchFormButton">
         </form>
         <div class="groupSearchResults">
             <ul>
-                <li class="groupSearchItem">
-                    Sample search result <a href="">(View)</a>
+                <li class="groupSearchItem" ng-repeat="searchResult in vm.searchResults track by searchResult.id">
+                    {{searchResult.name}} <a href="" ng-click="vm.viewGroup(searchResult)">(View)</a>
                 </li>
             </ul>
         </div>
     </div>
     <div class="verticalDivider"></div>
-    <div class="groupDetails">
-        <div class="groupInfo">
-            <h1>Group name</h1>
-            <div class="groupDescription">
-                A description of the group being viewed appears here, which may feature some of the group owner's favourite
-                latin texts, such as:
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et
-                dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex
-                ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
-                fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt
-                mollit anim id est laborum.
+    <div class="groupDetailsSection">
+        <div class="groupDetails" ng-show="vm.currentGroup">
+            <div class="groupInfo">
+                <h1>{{vm.currentGroup.name}}</h1>
+                <div class="groupDescription">
+                    {{vm.currentGroup.description}}
+                </div>
             </div>
-        </div>
-        <div class="groupOptions">
-            <!-- These items only visible if user is not a member of the group -->
-            <button>Join group</button>
-            <!-- These items only visible if user is a member of the group -->
-            <button>Edit group</button>
-            <button>Leave group</button>
-        </div>
-        <div class="groupMembers">
-            <h3>Group members</h3>
-            <ul>
-                <!-- This item only visible if user is a member of the group -->
-                <li>
-                    <form id="group-invite-form" class="groupInviteForm">
-                        <input id="group-invite-form-input" list="groupAvailableInvites" class="groupInviteFormInput">
-                        <datalist id="groupAvailableInvites">
-                            <option value="Sample invite">
-                        </datalist>
-                        <input id="group-invite-form-button" type="submit" value="Invite" class="button groupInviteFormButton">
-                    </form>
-                </li>
-                <li class="groupMemberListed">
-                    Sample group member
-                </li>
-            </ul>
+            <div class="groupOptions">
+                <!-- These items only visible if user is not a member of the group -->
+                <button ng-show="!vm.isInGroup(vm.currentGroup)" ng-click="vm.joinGroup(vm.currentGroup.id)">Join group</button>
+                <!-- These items only visible if user is a member of the group -->
+                <button ng-show="vm.isInGroup(vm.currentGroup)" ng-click="vm.startEditGroup()">Edit group</button>
+                <button ng-show="vm.isInGroup(vm.currentGroup)" ng-click="vm.leaveGroup(vm.currentGroup.id)">Leave group</button>
+            </div>
+            <div class="groupMembers">
+                <h3>Group members</h3>
+                <ul>
+                    <!-- This item only visible if user is a member of the group -->
+                    <li>
+                        <form id="group-invite-form" class="groupInviteForm" ng-submit="vm.inviteUser()">
+                            <input id="group-invite-form-input" ng-model="vm.invitationText" list="groupAvailableInvites" class="groupInviteFormInput">
+                            <datalist id="groupAvailableInvites">
+                                <option value="Sample invite">
+                            </datalist>
+                            <input id="group-invite-form-button" type="submit" value="Invite" class="button groupInviteFormButton">
+                        </form>
+                    </li>
+                    <li class="groupMemberListed" ng-repeat="groupMember in vm.currentGroupMembers">
+                        {{groupMember.name}}
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
