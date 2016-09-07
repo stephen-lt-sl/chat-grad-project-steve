@@ -1,0 +1,13 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    sass (3.4.22)
+
+PLATFORMS
+  x64-mingw32
+
+DEPENDENCIES
+  sass
+
+BUNDLED WITH
+   1.12.5

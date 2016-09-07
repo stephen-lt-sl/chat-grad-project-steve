@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
+    "preinstall": "bundle install",
     "postinstall": "grunt build",
     "test": "grunt test"
   },
@@ -38,6 +39,7 @@
     "express": "^4.13.0",
     "grunt": "0.4.5",
     "grunt-cli": "1.2.0",
+    "grunt-contrib-sass": "^1.0.0",
     "grunt-webpack": "^1.0.14",
     "mongodb": "^2.0.35",
     "request": "^2.58.0",
