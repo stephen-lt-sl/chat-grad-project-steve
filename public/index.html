@@ -8,7 +8,7 @@
     </head>
     <body ng-controller="ChatController as chatVm">
         <a ng-show="!chatVm.loggedIn" href="{{chatVm.loginUri}}">Log in</a>
-        <div ng-show="chatVm.loggedIn" class="chatAppDisplay">
+        <div ng-if="chatVm.loggedIn" class="chatAppDisplay">
             <div class="chatSelectSection">
                 <p>Logged in as {{chatVm.user.name}}.</p>
                 <div class="usersSection">
@@ -44,6 +44,8 @@
                         ng-show="chatVm.currentActionsSection === 'conversations'">
                     </chat-conversations-section>
                     <chat-groups-section
+                        user="chatVm.user"
+                        users="chatVm.users"
                         ng-show="chatVm.currentActionsSection === 'groups'">
                     </chat-groups-section>
                 </div>
