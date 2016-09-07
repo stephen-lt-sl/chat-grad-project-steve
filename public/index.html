@@ -25,18 +25,28 @@
                 <div class="actionsNavBar">
                     <nav>
                         <ul>
-                            <li><a href="#" ng-click="chatVm.setCurrentActionsSection('conversations')">Conversations</a></li>
+                            <li ng-class="{selectedActionSection: chatVm.currentActionsSection === 'conversations'}">
+                                <a href="#" ng-click="chatVm.setCurrentActionsSection('conversations')">Conversations</a>
+                            </li>
+                            <li ng-class="{selectedActionSection: chatVm.currentActionsSection === 'groups'}">
+                                <a href="#" ng-click="chatVm.setCurrentActionsSection('groups')">Groups</a>
+                            </li>
                         </ul>
                     </nav>
                 </div>
-                <chat-conversations-section
-                    conversation-controls="chatVm.conversationControls"
-                    notification-handlers="chatVm.notificationHandlers"
-                    set-messages-unread="chatVm.setMessagesUnread(otherID, messageCount)"
-                    get-user-name="chatVm.getUserName(userID)"
-                    user="chatVm.user"
-                    ng-show="chatVm.currentActionsSection === 'conversations'">
-                </chat-conversations-section>
+                <div class="actionsContainer">
+                    <chat-conversations-section
+                        conversation-controls="chatVm.conversationControls"
+                        notification-handlers="chatVm.notificationHandlers"
+                        set-messages-unread="chatVm.setMessagesUnread(otherID, messageCount)"
+                        get-user-name="chatVm.getUserName(userID)"
+                        user="chatVm.user"
+                        ng-show="chatVm.currentActionsSection === 'conversations'">
+                    </chat-conversations-section>
+                    <chat-groups-section
+                        ng-show="chatVm.currentActionsSection === 'groups'">
+                    </chat-groups-section>
+                </div>
             </div>
         </div>
     </body>
