@@ -57,7 +57,7 @@
         }
 
         function isInGroup(group) {
-            return group.users.indexOf("stephen-lt-sl") !== -1;
+            return group.users.indexOf($scope.user().i) !== -1;
         }
 
         function joinGroup(groupID) {

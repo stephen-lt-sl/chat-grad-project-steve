@@ -7,6 +7,7 @@
         return {
             restrict: "E",
             scope: {
+                user: "&"
             },
             templateUrl: "chat-groups-section.html",
             replace: true,
