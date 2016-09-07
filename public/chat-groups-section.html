@@ -33,11 +33,11 @@
                 <h3>Group members</h3>
                 <ul>
                     <!-- This item only visible if user is a member of the group -->
-                    <li>
+                    <li ng-show="vm.isInGroup(vm.currentGroup)">
                         <form id="group-invite-form" class="groupInviteForm" ng-submit="vm.inviteUser()">
                             <input id="group-invite-form-input" ng-model="vm.invitationText" list="groupAvailableInvites" class="groupInviteFormInput">
                             <datalist id="groupAvailableInvites">
-                                <option value="Sample invite">
+                                <option ng-repeat="user in vm.currentGroupNonMembers" value="{{user.name}}">
                             </datalist>
                             <input id="group-invite-form-button" type="submit" value="Invite" class="button groupInviteFormButton">
                         </form>
