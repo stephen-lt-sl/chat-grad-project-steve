@@ -6,8 +6,8 @@ module.exports = function(grunt) {
         grunt.loadNpmTasks("grunt-mocha-test");
         grunt.loadNpmTasks("grunt-mocha-istanbul");
         grunt.loadNpmTasks("grunt-concurrent");
-        grunt.loadNpmTasks("grunt-contrib-sass");
     }
+    grunt.loadNpmTasks("grunt-contrib-sass");
 
     var files = [
         "Gruntfile.js", "server.js", "server/**/*.js", "test/**/*.js", "public/**/*.js", "!public/build/*.js"
