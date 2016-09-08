@@ -16,7 +16,11 @@
             createConversation: createConversation,
             getConversationMessages: getConversationMessages,
             submitMessage: submitMessage,
-            getNotifications: getNotifications
+            getNotifications: getNotifications,
+            getGroups: getGroups,
+            createGroup: createGroup,
+            updateGroupInfo: updateGroupInfo,
+            addGroupMember: addGroupMember
         };
 
         function getSelf() {
