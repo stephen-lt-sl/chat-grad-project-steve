@@ -25,6 +25,13 @@
         vm.startEditGroup = startEditGroup;
         vm.leaveGroup = leaveGroup;
 
+        vm.editing = false;
+        vm.savingEdits = false;
+        vm.editName = "";
+        vm.editDescription = "";
+        vm.saveEditGroup = saveEditGroup;
+        vm.cancelEditGroup = cancelEditGroup;
+
         vm.inviteUser = inviteUser;
         vm.invitationText = "";
         vm.currentGroupMembers = [];
@@ -62,11 +69,31 @@
         }
 
         function startEditGroup() {
-            console.log("Editing group " + vm.currentGroup.groupID);
+            vm.editName = currentGroup.name;
+            vm.editDescription = currentGroup.description;
+            vm.editing = true;
         }
 
         function leaveGroup(groupID) {
             console.log("Leaving group " + groupID);
+        }
+
+        function saveEditGroup() {
+            vm.savingEdits = true;
+            return chatDataService.updateGroupInfo(vm.currentGroup.id, vm.editName, vm.editDescription)
+                .catch(function(errorResponse) {
+                    console.log("Failed to update group. Server returned code " + errorResponse.status + ".");
+                    return errorResponse;
+                })
+                .then(function() {
+                    vm.editing = false;
+                    vm.savingEdits = false;
+                });
+        }
+
+        function cancelEditGroup() {
+            vm.editing = false;
+            vm.savingEdits = false;
         }
 
         function inviteUser() {

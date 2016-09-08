@@ -16,18 +16,31 @@
     <div class="verticalDivider"></div>
     <div class="groupDetailsSection">
         <div class="groupDetails" ng-if="vm.currentGroup">
-            <div class="groupInfo">
-                <h1>{{vm.currentGroup.name}}</h1>
-                <div class="groupDescription">
-                    {{vm.currentGroup.description}}
+            <div ng-hide="vm.editing">
+                <div class="groupInfo">
+                    <h1>{{vm.currentGroup.name}}</h1>
+                    <div class="groupDescription">
+                        {{vm.currentGroup.description}}
+                    </div>
+                </div>
+                <div class="groupOptions">
+                    <!-- These items only visible if user is not a member of the group -->
+                    <button ng-show="!vm.isInGroup(vm.currentGroup)" ng-click="vm.joinGroup(vm.currentGroup.id)">Join group</button>
+                    <!-- These items only visible if user is a member of the group -->
+                    <button ng-show="vm.isInGroup(vm.currentGroup)" ng-click="vm.startEditGroup()">Edit group</button>
+                    <button ng-show="vm.isInGroup(vm.currentGroup)" ng-click="vm.leaveGroup(vm.currentGroup.id)">Leave group</button>
                 </div>
             </div>
-            <div class="groupOptions">
-                <!-- These items only visible if user is not a member of the group -->
-                <button ng-show="!vm.isInGroup(vm.currentGroup)" ng-click="vm.joinGroup(vm.currentGroup.id)">Join group</button>
-                <!-- These items only visible if user is a member of the group -->
-                <button ng-show="vm.isInGroup(vm.currentGroup)" ng-click="vm.startEditGroup()">Edit group</button>
-                <button ng-show="vm.isInGroup(vm.currentGroup)" ng-click="vm.leaveGroup(vm.currentGroup.id)">Leave group</button>
+            <div ng-show="vm.editing">
+                <fieldset class="groupEditInfo">
+                    <p>Group name: <input type="text" ng-model="vm.editName"/></p>
+                    <p>Group description:<br/>
+                    <textarea ng-model="vm.editName"></textarea></p>
+                </fieldset>
+                <div class="groupEditOptions">
+                    <button disabled="vm.savingEdits" ng-click="vm.saveEditGroup()">{{vm.savingEdits ? Saving... : Save}}</button>
+                    <button ng-click="vm.cancelEditGroup()">Cancel</button>
+                </div>
             </div>
             <div class="groupMembers">
                 <h3>Group members</h3>
