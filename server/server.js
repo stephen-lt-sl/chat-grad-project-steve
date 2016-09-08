@@ -3,7 +3,7 @@
 var express = require("express");
 var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
-var mongo = require('mongodb');
+var mongo = require("mongodb");
 
 module.exports = function(port, db, githubAuthoriser) {
     var app = express();
