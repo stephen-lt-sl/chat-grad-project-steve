@@ -15,12 +15,15 @@
             getConversation: getConversation,
             createConversation: createConversation,
             getConversationMessages: getConversationMessages,
+            getConversationMessageCount: getConversationMessageCount,
             submitMessage: submitMessage,
             getNotifications: getNotifications,
             getGroups: getGroups,
             createGroup: createGroup,
             updateGroupInfo: updateGroupInfo,
-            addGroupMember: addGroupMember
+            inviteUserToGroup: inviteUserToGroup,
+            removeUserFromGroup: removeUserFromGroup,
+            joinGroup: joinGroup
         };
 
         function getSelf() {
@@ -55,6 +58,14 @@
                 return $http.get("/api/messages/" + conversationID, {params: params});
             } else {
                 return $http.get("/api/messages/" + conversationID);
+            }
+        }
+
+        function getConversationMessageCount(conversationID, params) {
+            if (params) {
+                return $http.get("/api/messages/" + conversationID + "/count", {params: params});
+            } else {
+                return $http.get("/api/messages/" + conversationID + "/count");
             }
         }
 
@@ -104,29 +115,46 @@
         function updateGroupInfo(groupID, name, description) {
             return $http({
                 method: "PUT",
-                url: "/api/groups/" + groupID,
+                url: "/api/groups/" + groupID + "/update",
                 headers: {
                     "Content-type": "application/json"
                 },
                 data: JSON.stringify({
-                    groupInfo: {
-                        name: name,
-                        description: description
-                    }
+                    name: name,
+                    description: description
                 })
             });
         }
 
-        function addGroupMember(groupID, userID) {
+        function inviteUserToGroup(groupID, userID) {
             return $http({
                 method: "PUT",
-                url: "/api/groups/" + groupID,
+                url: "/api/groups/" + groupID + "/invite",
                 headers: {
                     "Content-type": "application/json"
                 },
-                data: JSON.stringify({
-                    newUsers: [userID]
-                })
+                data: JSON.stringify([userID])
+            });
+        }
+
+        function removeUserFromGroup(groupID, userID) {
+            return $http({
+                method: "PUT",
+                url: "/api/groups/" + groupID + "/remove",
+                headers: {
+                    "Content-type": "application/json"
+                },
+                data: JSON.stringify([userID])
+            });
+        }
+
+        function joinGroup(groupID) {
+            return $http({
+                method: "PUT",
+                url: "/api/groups/" + groupID + "/join",
+                headers: {
+                    "Content-type": "application/json"
+                }
             });
         }
     }
