@@ -281,10 +281,32 @@ module.exports = function(port, db, githubAuthoriser) {
         });
     });
 
+    function groupUpdateQuery(group, senderID, newUsers, removedUsers, groupInfo) {
+        var updateObject = {};
+        if (newUsers) {
+            updateObject.$addToSet = {users: {$each: newUsers}};
+        }
+        if (removedUsers) {
+            updateObject.$pull = {users: {$in: removedUsers}};
+        }
+        if (groupInfo) {
+            updateObject.$set = {};
+            for (var item in groupInfo) {
+                // Don't update any fields that don't exist, the _id field (locked), or the users field
+                // (limited access)
+                if (group[item] && item !== "_id" && item !== "users") {
+                    updateObject.$set[item] = groupInfo[item];
+                }
+            }
+        }
+        return updateObject;
+    }
+
     app.put("/api/groups/:id", function(req, res) {
         var groupID = req.params.id;
         var groupInfo = req.body.groupInfo;
         var newUsers = req.body.newUsers;
+        var removedUsers = req.body.removedUsers;
         var queryObject = {_id: groupID};
         groups.find(queryObject).limit(1).next().then(function(group) {
             if (!group) {
@@ -295,20 +317,12 @@ module.exports = function(port, db, githubAuthoriser) {
                 res.sendStatus(403);
                 return Promise.resolve();
             }
-            var updateObject = {};
-            if (newUsers) {
-                updateObject.$addToSet = {users: {$each: newUsers}};
+            // For now, only allow users to remove themselves from a group
+            if (removedUsers && (removedUsers.length !== 1 || removedUsers[0] !== senderID)) {
+                res.sendStatus(409);
+                return Promise.resolve();
             }
-            if (groupInfo) {
-                updateObject.$set = {};
-                for (var item in groupInfo) {
-                    // Don't update any fields that don't exist, the _id field (locked), or the users field
-                    // (limited access)
-                    if (group[item] && item !== "_id" && item !== "users") {
-                        updateObject.$set[item] = groupInfo[item];
-                    }
-                }
-            }
+            var updateObject = groupUpdateQuery(group, req.session.user, newUsers, removedUsers, groupInfo);
             return groups.findOneAndUpdate(queryObject, updateObject).then(function(updateResult) {
                 res.json(cleanIdField(updateResult.value));
             });
