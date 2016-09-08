@@ -318,7 +318,7 @@ module.exports = function(port, db, githubAuthoriser) {
                 return Promise.resolve();
             }
             // For now, only allow users to remove themselves from a group
-            if (removedUsers && (removedUsers.length !== 1 || removedUsers[0] !== senderID)) {
+            if (removedUsers && (removedUsers.length !== 1 || removedUsers[0] !== req.session.user)) {
                 res.sendStatus(409);
                 return Promise.resolve();
             }
