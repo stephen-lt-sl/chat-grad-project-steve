@@ -296,6 +296,19 @@ module.exports.getNotifications = function(conversationID, queryParams) {
     }
     return request(requestObject);
 };
+module.exports.getGroups = function(queryParams) {
+    var requestUrl = baseUrl + "/api/groups";
+    var requestObject = {
+        url: requestUrl,
+        jar: cookieJar,
+        simple: false,
+        resolveWithFullResponse: true
+    };
+    if (queryParams) {
+        requestObject.qs = queryParams;
+    }
+    return request(requestObject);
+};
 module.exports.postGroup = function(name, description) {
     var requestUrl = baseUrl + "/api/groups";
     return request.post({
