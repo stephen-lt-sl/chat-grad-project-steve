@@ -11,8 +11,10 @@
         /* jshint validthis: true */
         var vm = this;
 
+        vm.groups = [];
+
         vm.viewGroup = viewGroup;
-        vm.currentGroup = {};
+        vm.currentGroup = false;
 
         vm.searchForGroups = searchForGroups;
         vm.searchString = "";
@@ -23,6 +25,13 @@
         vm.startEditGroup = startEditGroup;
         vm.leaveGroup = leaveGroup;
 
+        vm.editing = false;
+        vm.savingEdits = false;
+        vm.editName = "";
+        vm.editDescription = "";
+        vm.saveEditGroup = saveEditGroup;
+        vm.cancelEditGroup = cancelEditGroup;
+
         vm.inviteUser = inviteUser;
         vm.invitationText = "";
         vm.currentGroupMembers = [];
@@ -32,20 +41,9 @@
         activate();
 
         function activate() {
-            vm.searchResults = [
-                {
-                    id: "5",
-                    name: "Test group",
-                    description: "This is just a test group; nothing more, nothing less.",
-                    users: ["stephen-lt-sl", "Melamoto"]
-                }, {
-                    id: "6",
-                    name: "Test group 2",
-                    description: "This is another test group; it might be a little less.",
-                    users: ["Melamoto"]
-                }
-            ];
-            viewGroup(vm.searchResults[0]);
+            chatDataService.getGroups().then(function(groupResponse) {
+                vm.groups = groupResponse.data;
+            });
         }
 
         function viewGroup(group) {
@@ -54,7 +52,12 @@
         }
 
         function searchForGroups() {
-            console.log("Searching for " + vm.searchString);
+            return chatDataService.getGroups(false, vm.searchString).then(function(searchResponse) {
+                vm.searchResults = searchResponse.data;
+            }).catch(function(errorResponse) {
+                console.log("Failed to perform search. Server returned code " + errorResponse.status + ".");
+                return errorResponse;
+            });
         }
 
         function isInGroup(group) {
@@ -62,19 +65,53 @@
         }
 
         function joinGroup(groupID) {
-            console.log("Joining group " + groupID);
+            return chatDataService.addGroupMember(groupID, $scope.user()._id);
         }
 
         function startEditGroup() {
-            console.log("Editing group " + vm.currentGroup.groupID);
+            vm.editName = vm.currentGroup.name;
+            vm.editDescription = vm.currentGroup.description;
+            vm.editing = true;
         }
 
         function leaveGroup(groupID) {
             console.log("Leaving group " + groupID);
         }
 
+        function saveEditGroup() {
+            vm.savingEdits = true;
+            return chatDataService.updateGroupInfo(vm.currentGroup.id, vm.editName, vm.editDescription)
+                .then(function(updateResponse) {
+                    console.log("Updated");
+                    console.log(updateResponse);
+                    vm.currentGroup = updateResponse.data;
+                })
+                .catch(function(errorResponse) {
+                    console.log("Failed to update group. Server returned code " + errorResponse.status + ".");
+                    return errorResponse;
+                })
+                .then(function() {
+                    vm.editing = false;
+                    vm.savingEdits = false;
+                });
+        }
+
+        function cancelEditGroup() {
+            vm.editing = false;
+            vm.savingEdits = false;
+        }
+
         function inviteUser() {
-            console.log("Inviting " + vm.invitationText);
+            var recipientUsername = vm.invitationText;
+            vm.invitationText = "";
+            var recipient = $scope.users().find(function(user) {
+                return user.name === recipientUsername;
+            });
+            if (recipient) {
+                return chatDataService.addGroupMember(vm.currentGroup.id, recipient.id);
+            } else {
+                return Promise.reject();
+            }
         }
 
         function setCurrentGroupMemberships() {

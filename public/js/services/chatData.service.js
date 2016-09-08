@@ -16,7 +16,11 @@
             createConversation: createConversation,
             getConversationMessages: getConversationMessages,
             submitMessage: submitMessage,
-            getNotifications: getNotifications
+            getNotifications: getNotifications,
+            getGroups: getGroups,
+            createGroup: createGroup,
+            updateGroupInfo: updateGroupInfo,
+            addGroupMember: addGroupMember
         };
 
         function getSelf() {
@@ -70,6 +74,60 @@
 
         function getNotifications() {
             return $http.get("/api/notifications/");
+        }
+
+        function getGroups(joinedOnly, searchString) {
+            var queryParams = {};
+            if (joinedOnly !== undefined) {
+                queryParams.joinedOnly = joinedOnly;
+            }
+            if (searchString !== undefined) {
+                queryParams.searchString = searchString;
+            }
+            return $http.get("/api/groups/", {params: queryParams});
+        }
+
+        function createGroup(name, description) {
+            return $http({
+                method: "POST",
+                url: "/api/groups/",
+                headers: {
+                    "Content-type": "application/json"
+                },
+                data: JSON.stringify({
+                    name: name,
+                    description: description
+                })
+            });
+        }
+
+        function updateGroupInfo(groupID, name, description) {
+            return $http({
+                method: "PUT",
+                url: "/api/groups/" + groupID,
+                headers: {
+                    "Content-type": "application/json"
+                },
+                data: JSON.stringify({
+                    groupInfo: {
+                        name: name,
+                        description: description
+                    }
+                })
+            });
+        }
+
+        function addGroupMember(groupID, userID) {
+            return $http({
+                method: "PUT",
+                url: "/api/groups/" + groupID,
+                headers: {
+                    "Content-type": "application/json"
+                },
+                data: JSON.stringify({
+                    newUsers: [userID]
+                })
+            });
         }
     }
 })();

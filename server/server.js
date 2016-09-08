@@ -3,6 +3,7 @@
 var express = require("express");
 var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
+var mongo = require("mongodb");
 
 module.exports = function(port, db, githubAuthoriser) {
     var app = express();
@@ -333,7 +334,7 @@ module.exports = function(port, db, githubAuthoriser) {
         var groupInfo = req.body.groupInfo;
         var newUsers = req.body.newUsers;
         var removedUsers = req.body.removedUsers;
-        var queryObject = {_id: groupID};
+        var queryObject = {_id: new mongo.ObjectID(groupID)};
         groups.find(queryObject).limit(1).next().then(function(group) {
             if (!group) {
                 res.sendStatus(404);
@@ -349,7 +350,9 @@ module.exports = function(port, db, githubAuthoriser) {
                 return Promise.resolve();
             }
             var updateObject = groupUpdateQuery(group, req.session.user, newUsers, removedUsers, groupInfo);
-            return groups.findOneAndUpdate(queryObject, updateObject).then(function(updateResult) {
+            return groups.findOneAndUpdate(queryObject, updateObject, {
+                returnOriginal: false
+            }).then(function(updateResult) {
                 res.json(cleanIdField(updateResult.value));
             });
         }).catch(function(err) {
