@@ -105,10 +105,10 @@
             var recipientUsername = vm.invitationText;
             vm.invitationText = "";
             var recipient = $scope.users().find(function(user) {
-                return user.name === username;
+                return user.name === recipientUsername;
             });
             if (recipient) {
-                return chatDataService.addGroupMember(groupID, recipient.id);
+                return chatDataService.addGroupMember(vm.currentGroup.id, recipient.id);
             } else {
                 return Promise.reject();
             }
