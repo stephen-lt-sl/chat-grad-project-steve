@@ -69,8 +69,8 @@
         }
 
         function startEditGroup() {
-            vm.editName = currentGroup.name;
-            vm.editDescription = currentGroup.description;
+            vm.editName = vm.currentGroup.name;
+            vm.editDescription = vm.currentGroup.description;
             vm.editing = true;
         }
 
@@ -81,6 +81,11 @@
         function saveEditGroup() {
             vm.savingEdits = true;
             return chatDataService.updateGroupInfo(vm.currentGroup.id, vm.editName, vm.editDescription)
+                .then(function(updateResponse) {
+                    console.log("Updated");
+                    console.log(updateResponse);
+                    vm.currentGroup = updateResponse.data;
+                })
                 .catch(function(errorResponse) {
                     console.log("Failed to update group. Server returned code " + errorResponse.status + ".");
                     return errorResponse;

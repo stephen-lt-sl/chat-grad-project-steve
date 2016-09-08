@@ -16,7 +16,7 @@
     <div class="verticalDivider"></div>
     <div class="groupDetailsSection">
         <div class="groupDetails" ng-if="vm.currentGroup">
-            <div ng-hide="vm.editing">
+            <div ng-show="!vm.editing">
                 <div class="groupInfo">
                     <h1>{{vm.currentGroup.name}}</h1>
                     <div class="groupDescription">
@@ -35,10 +35,10 @@
                 <fieldset class="groupEditInfo">
                     <p>Group name: <input type="text" ng-model="vm.editName"/></p>
                     <p>Group description:<br/>
-                    <textarea ng-model="vm.editName"></textarea></p>
+                    <textarea ng-model="vm.editDescription" class="groupEditDescription"></textarea></p>
                 </fieldset>
                 <div class="groupEditOptions">
-                    <button disabled="vm.savingEdits" ng-click="vm.saveEditGroup()">{{vm.savingEdits ? Saving... : Save}}</button>
+                    <button ng-disabled="{{vm.savingEdits}}" ng-click="vm.saveEditGroup()">{{vm.savingEdits ? "Saving..." : "Save"}}</button>
                     <button ng-click="vm.cancelEditGroup()">Cancel</button>
                 </div>
             </div>

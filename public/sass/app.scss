@@ -179,10 +179,6 @@ $group-search-text-width: calc(100% - #{$group-search-button-width});
     padding-left: 20px;
 }
 
-.groupInfo {
-
-}
-
 .groupDescription {
     width: calc(50px + 70%);
     max-width: 100%;
@@ -190,4 +186,10 @@ $group-search-text-width: calc(100% - #{$group-search-button-width});
 
 .groupOptions {
     padding-top: 15px;
+}
+
+.groupEditDescription {
+    height:200px;
+    width: calc(50px + 70%);
+    resize: none;
 }
