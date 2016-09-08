@@ -110,24 +110,27 @@ module.exports = function(port, db, githubAuthoriser) {
         });
     });
 
+    function findUsers(userIDs) {
+        var findPromises = [];
+        userIDs.forEach(function(userID, idx) {
+            findPromises.push(users.find({
+                _id: userID
+            }).limit(1).next().then(function(foundUser) {
+                if (!foundUser) {
+                    return Promise.reject(false);
+                }
+                return foundUser;
+            }));
+        });
+        return Promise.all(findPromises);
+    }
+
     app.post("/api/conversations", function(req, res) {
         var conversationInfo = req.body;
         var recipientID = conversationInfo.recipient;
         var senderID = req.session.user;
         // Find both the sender and the recipient in the db
-        users.find({
-            _id: senderID
-        }).limit(1).next().then(function(sender) {
-            if (!sender) {
-                return Promise.reject(false);
-            }
-            return users.find({
-                _id: recipientID
-            }).limit(1).next();
-        }).then(function(recipient) {
-            if (!recipient) {
-                return Promise.reject(false);
-            }
+        findUsers([senderID, recipientID]).then(function() {
             var conversationID = getConversationID(senderID, recipientID);
             var participants = [senderID, recipientID].sort();
             return conversations.insertOne({
@@ -191,24 +194,23 @@ module.exports = function(port, db, githubAuthoriser) {
             if (!conversation) {
                 return Promise.reject(false);
             }
-            if (conversation.participants.indexOf(senderID) !== -1) {
-                var timestamp = new Date();
-                messages.insertOne({
-                    senderID: senderID,
-                    conversationID: conversationID,
-                    contents: contents,
-                    timestamp: timestamp
-                }).then(function(result) {
-                    var message = result.ops[0];
-                    updateConversation(conversation, message);
-                    addNewMessageNotification(conversation, message);
-                    res.json(cleanIdField(message));
-                }).catch(function(err) {
-                    res.sendStatus(500);
-                });
-            } else {
+            if (conversation.participants.indexOf(senderID) === -1) {
                 res.sendStatus(403);
             }
+            var timestamp = new Date();
+            messages.insertOne({
+                senderID: senderID,
+                conversationID: conversationID,
+                contents: contents,
+                timestamp: timestamp
+            }).then(function(result) {
+                var message = result.ops[0];
+                updateConversation(conversation, message);
+                addNewMessageNotification(conversation, message);
+                res.json(cleanIdField(message));
+            }).catch(function(err) {
+                res.sendStatus(500);
+            });
         }).catch(function(err) {
             res.sendStatus(500);
         });
@@ -225,23 +227,23 @@ module.exports = function(port, db, githubAuthoriser) {
             if (!conversation) {
                 return Promise.reject(false);
             }
-            if (conversation.participants.indexOf(senderID) !== -1) {
-                var queryObject = {conversationID: conversationID};
-                if (lastTimestamp) {
-                    queryObject.timestamp = {$gt: new Date(lastTimestamp)};
-                }
-                if (countOnly) {
-                    return messages.count(queryObject).then(function(count) {
-                        res.json({count: count});
-                    });
-                } else {
-                    return messages.find(queryObject).toArray().then(function(docs) {
-                        clearNotification(senderID, "new_messages", {conversationID: conversationID});
-                        res.json(docs.map(cleanIdField));
-                    });
-                }
-            } else {
+            if (conversation.participants.indexOf(senderID) === -1) {
                 res.sendStatus(403);
+                return Promise.resolve();
+            }
+            var queryObject = {conversationID: conversationID};
+            if (lastTimestamp) {
+                queryObject.timestamp = {$gt: new Date(lastTimestamp)};
+            }
+            if (countOnly) {
+                return messages.count(queryObject).then(function(count) {
+                    res.json({count: count});
+                });
+            } else {
+                return messages.find(queryObject).toArray().then(function(docs) {
+                    clearNotifications(senderID, "new_messages", {conversationID: conversationID});
+                    res.json(docs.map(cleanIdField));
+                });
             }
         }).catch(function(err) {
             res.sendStatus(500);
@@ -253,6 +255,30 @@ module.exports = function(port, db, githubAuthoriser) {
         notifications.find({
             userID: userID
         }).toArray().then(function(docs) {
+            res.json(docs.map(cleanIdField));
+        }).catch(function(err) {
+            res.sendStatus(500);
+        });
+    });
+
+    app.get("/api/groups", function(req, res) {
+        var senderID = req.session.user;
+        var joinedOnly = req.query.joinedOnly;
+        var searchString = req.query.searchString;
+        var queryObject = {};
+        if (joinedOnly) {
+            queryObject.users = senderID;
+        }
+        if (searchString) {
+            queryObject.$text = {
+                $search: searchString
+            };
+        }
+        groups.find(queryObject).toArray().then(function(docs) {
+            var groupIDs = docs.map(function(group) {
+                return group._id;
+            });
+            clearNotifications(senderID, "group_changed", {groupID: {$in: groupIDs}});
             res.json(docs.map(cleanIdField));
         }).catch(function(err) {
             res.sendStatus(500);
@@ -330,7 +356,7 @@ module.exports = function(port, db, githubAuthoriser) {
         return cleanObj;
     }
 
-    function clearNotification(userID, type, data) {
+    function clearNotifications(userID, type, data) {
         var notificationQuery = {
             userID: userID,
             type: type
@@ -338,7 +364,7 @@ module.exports = function(port, db, githubAuthoriser) {
         for (var key in data) {
             notificationQuery["data." + key] = data[key];
         }
-        notifications.deleteOne(notificationQuery);
+        notifications.deleteMany(notificationQuery);
     }
 
     return app.listen(port);

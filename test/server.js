@@ -659,14 +659,14 @@ describe("server", function() {
                 });
             }
         );
-        it("attempts to delete the 'new_message' notification for the user-conversation pair", function() {
+        it("attempts to delete the 'new_messages' notification for the user-conversation pair", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation);
                     helpers.setFindResult("messages", true, [testMessage, testMessage2]);
                     return helpers.getMessages(testConversation._id);
                 }).then(function(response) {
-                    assert.equal(helpers.getDeleteOneCallCount("notifications"), 1);
-                    assert.deepEqual(helpers.getDeleteOneArgs("notifications", 0)[0], {
+                    assert.equal(helpers.getDeleteManyCallCount("notifications"), 1);
+                    assert.deepEqual(helpers.getDeleteManyArgs("notifications", 0)[0], {
                         userID: testUser._id,
                         type: "new_messages",
                         "data.conversationID": testConversation._id
@@ -846,6 +846,101 @@ describe("server", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindResult("notifications", false, {err: "Database failure"});
                 return helpers.getNotifications(testConversation._id);
+            }).then(function(response) {
+                assert.equal(response.statusCode, 500);
+            });
+        });
+    });
+    describe("GET /api/groups/", function() {
+        it("responds with status code 401 if user not authenticated", function() {
+            return helpers.getGroups().then(function(response) {
+                assert.equal(response.statusCode, 401);
+            });
+        });
+        it("responds with status code 401 if user has an unrecognised session token", function() {
+            helpers.setSessionToken(testExpiredToken);
+            return helpers.getGroups().then(function(response) {
+                assert.equal(response.statusCode, 401);
+            });
+        });
+        it("attempts to find all groups in the database if user is authenticated and no query parameters are set",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindResult("groups", true, [testGroup]);
+                    return helpers.getGroups();
+                }).then(function(response) {
+                    assert.equal(helpers.getFindCallCount("groups"), 1);
+                    assert.deepEqual(helpers.getFindAnyArgs("groups", 0)[0], {});
+                });
+            }
+        );
+        it("attempts to find only groups that the user has joined if user is authenticated and `joinedOnly` query " +
+            "parameter is set to true", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindResult("groups", true, [testGroup]);
+                    return helpers.getGroups({joinedOnly: true});
+                }).then(function(response) {
+                    assert.equal(helpers.getFindCallCount("groups"), 1);
+                    assert.deepEqual(helpers.getFindAnyArgs("groups", 0)[0], {
+                        users: testUser._id
+                    });
+                });
+            }
+        );
+        it("attempts to find only groups that match the given search string if user is authenticated and " +
+            "`searchString` query parameter is set", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindResult("groups", true, [testGroup]);
+                    return helpers.getGroups({searchString: "Test Group"});
+                }).then(function(response) {
+                    assert.equal(helpers.getFindCallCount("groups"), 1);
+                    assert.deepEqual(helpers.getFindAnyArgs("groups", 0)[0], {
+                        $text: {
+                            $search: "Test Group"
+                        }
+                    });
+                });
+            }
+        );
+        it("attempts to delete any of the user's 'group_changed' notifications for the groups found", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindResult("groups", true, [testGroup]);
+                    return helpers.getGroups();
+                }).then(function(response) {
+                    assert.equal(helpers.getDeleteManyCallCount("notifications"), 1);
+                    assert.deepEqual(helpers.getDeleteManyArgs("notifications", 0)[0], {
+                        userID: testUser._id,
+                        type: "group_changed",
+                        "data.groupID": {$in: [testGroup._id]}
+                    });
+                });
+            }
+        );
+        it("responds with status code 200 if user is authenticated", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindResult("groups", true, [testGroup]);
+                return helpers.getGroups();
+            }).then(function(response) {
+                assert.equal(response.statusCode, 200);
+            });
+        });
+        it("responds with a body that is a JSON representation of all groups if user is authenticated", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindResult("groups", true, [testGroup]);
+                return helpers.getGroups();
+            }).then(function(response) {
+                assert.deepEqual(JSON.parse(response.body), [{
+                    id: testGroup._id,
+                    name: testGroup.name,
+                    description: testGroup.description,
+                    users: testGroup.users
+                }]);
+            });
+        });
+        it("responds with status code 500 if database error on find", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindResult("groups", false, {err: "Database failure"});
+                return helpers.getGroups();
             }).then(function(response) {
                 assert.equal(response.statusCode, 500);
             });

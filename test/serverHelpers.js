@@ -45,7 +45,7 @@ function setupDB() {
         notifications: {
             find: sinon.stub(),
             updateOne: sinon.stub(),
-            deleteOne: sinon.stub()
+            deleteMany: sinon.stub()
         },
         groups: {
             find: sinon.stub(),
@@ -137,8 +137,8 @@ module.exports.setUpdateOneResult = function(collection, success, result, callNu
     var dbCursorCall = callNum === undefined ? dbCursor : dbCursor.onCall(callNum);
     dbCursorCall.returns(success ? Promise.resolve(result) : Promise.reject(result));
 };
-module.exports.setDeleteOneResult = function(collection, success, result, callNum) {
-    var dbCursor = dbCollections[collection].deleteOne;
+module.exports.setDeleteManyResult = function(collection, success, result, callNum) {
+    var dbCursor = dbCollections[collection].deleteMany;
     var dbCursorCall = callNum === undefined ? dbCursor : dbCursor.onCall(callNum);
     dbCursorCall.returns(success ? Promise.resolve(result) : Promise.reject(result));
 };
@@ -165,8 +165,8 @@ module.exports.getInsertOneCallCount = function(collection) {
 module.exports.getUpdateOneCallCount = function(collection) {
     return dbCollections[collection].updateOne.callCount;
 };
-module.exports.getDeleteOneCallCount = function(collection) {
-    return dbCollections[collection].deleteOne.callCount;
+module.exports.getDeleteManyCallCount = function(collection) {
+    return dbCollections[collection].deleteMany.callCount;
 };
 module.exports.getCountCallCount = function(collection) {
     return dbCollections[collection].count.callCount;
@@ -184,8 +184,8 @@ module.exports.getInsertOneArgs = function(collection, callNum) {
 module.exports.getUpdateOneArgs = function(collection, callNum) {
     return dbCollections[collection].updateOne.getCall(callNum).args;
 };
-module.exports.getDeleteOneArgs = function(collection, callNum) {
-    return dbCollections[collection].deleteOne.getCall(callNum).args;
+module.exports.getDeleteManyArgs = function(collection, callNum) {
+    return dbCollections[collection].deleteMany.getCall(callNum).args;
 };
 module.exports.getCountArgs = function(collection, callNum) {
     return dbCollections[collection].count.getCall(callNum).args;
@@ -285,6 +285,19 @@ module.exports.getMessages = function(conversationID, queryParams) {
 };
 module.exports.getNotifications = function(conversationID, queryParams) {
     var requestUrl = baseUrl + "/api/notifications";
+    var requestObject = {
+        url: requestUrl,
+        jar: cookieJar,
+        simple: false,
+        resolveWithFullResponse: true
+    };
+    if (queryParams) {
+        requestObject.qs = queryParams;
+    }
+    return request(requestObject);
+};
+module.exports.getGroups = function(queryParams) {
+    var requestUrl = baseUrl + "/api/groups";
     var requestObject = {
         url: requestUrl,
         jar: cookieJar,
