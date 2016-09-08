@@ -612,7 +612,12 @@ describe("server", function() {
             }
         );
     });
-    describe("GET /api/messages", function() {
+    describe("GET /api/messages/:id", function() {
+        function validQuery(queryParams) {
+            helpers.setFindOneResult("conversations", true, testConversation);
+            helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+            return helpers.getMessages(testConversation._id, queryParams);
+        }
         it("responds with status code 401 if user not authenticated", function() {
             return helpers.getMessages(testConversation._id).then(function(response) {
                 assert.equal(response.statusCode, 401);
@@ -627,9 +632,7 @@ describe("server", function() {
         it("makes database requests with the conversation ID sent in the request body",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("conversations", true, testConversation);
-                    helpers.setFindResult("messages", true, [testMessage, testMessage2]);
-                    return helpers.getMessages(testConversation._id);
+                    return validQuery();
                 }).then(function(response) {
                     assert.equal(helpers.getFindOneCallCount("conversations"), 1);
                     assert.deepEqual(helpers.getFindAnyArgs("conversations", 0)[0], {
@@ -644,9 +647,7 @@ describe("server", function() {
         );
         it("attempts to find only messages newer than the query timestamp if one exists", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("conversations", true, testConversation);
-                    helpers.setFindResult("messages", true, [testMessage, testMessage2]);
-                    return helpers.getMessages(testConversation._id, {
+                    return validQuery({
                         timestamp: new Date(2016, 8, 24, 14, 5, 2).toISOString()
                     });
                 }).then(function(response) {
@@ -662,9 +663,7 @@ describe("server", function() {
         );
         it("attempts to delete the 'new_messages' notification for the user-conversation pair", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("conversations", true, testConversation);
-                    helpers.setFindResult("messages", true, [testMessage, testMessage2]);
-                    return helpers.getMessages(testConversation._id);
+                    return validQuery();
                 }).then(function(response) {
                     assert.equal(helpers.getDeleteManyCallCount("notifications"), 1);
                     assert.deepEqual(helpers.getDeleteManyArgs("notifications", 0)[0], {
@@ -675,26 +674,10 @@ describe("server", function() {
                 });
             }
         );
-        it("attempts to find only the number of messages in the conversation if `countOnly` is passed true in the " +
-            "query", function() {
-                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("conversations", true, testConversation);
-                    helpers.setCountResult("messages", true, 2);
-                    return helpers.getMessages(testConversation._id, {countOnly: true});
-                }).then(function(response) {
-                    assert.equal(helpers.getCountCallCount("messages"), 1);
-                    assert.deepEqual(helpers.getCountArgs("messages", 0)[0], {
-                        conversationID: testConversation._id
-                    });
-                });
-            }
-        );
         it("responds with status code 200 if user is authenticated, conversation exists, and user is a participant",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("conversations", true, testConversation);
-                    helpers.setFindResult("messages", true, [testMessage, testMessage2]);
-                    return helpers.getMessages(testConversation._id);
+                    return validQuery();
                 }).then(function(response) {
                     assert.equal(response.statusCode, 200);
                 });
@@ -703,9 +686,7 @@ describe("server", function() {
         it("responds with a body that is a JSON representation of the messages in the conversation if user is " +
             "authenticated, conversation exists, and user is a participant", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("conversations", true, testConversation);
-                    helpers.setFindResult("messages", true, [testMessage, testMessage2]);
-                    return helpers.getMessages(testConversation._id);
+                    return validQuery();
                 }).then(function(response) {
                     assert.deepEqual(JSON.parse(response.body), [
                         {
@@ -726,34 +707,11 @@ describe("server", function() {
                 });
             }
         );
-        it("responds with a body that is a JSON representation of the number of messages in the conversation if " +
-            "user is authenticated, conversation exists, user is a participant, and `countOnly` is specified",
-            function() {
-                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("conversations", true, testConversation);
-                    helpers.setCountResult("messages", true, 2);
-                    return helpers.getMessages(testConversation._id, {countOnly: true});
-                }).then(function(response) {
-                    assert.deepEqual(JSON.parse(response.body), {
-                        count: 2
-                    });
-                });
-            }
-        );
         it("responds with status code 500 if database error on find messages", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", true, testConversation);
                 helpers.setFindResult("messages", false, {err: "Database failure"});
                 return helpers.getMessages(testConversation._id);
-            }).then(function(response) {
-                assert.equal(response.statusCode, 500);
-            });
-        });
-        it("responds with status code 500 if database error on find message count", function() {
-            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                helpers.setFindOneResult("conversations", true, testConversation);
-                helpers.setCountResult("messages", false, {err: "Database failure"});
-                return helpers.getMessages(testConversation._id, {countOnly: true});
             }).then(function(response) {
                 assert.equal(response.statusCode, 500);
             });
@@ -783,6 +741,122 @@ describe("server", function() {
                 helpers.setFindOneResult("conversations", false, {err: "Database failure"});
                 helpers.setFindResult("messages", true, [testMessage, testMessage2]);
                 return helpers.getMessages(testConversation._id);
+            }).then(function(response) {
+                assert.equal(response.statusCode, 500);
+            });
+        });
+    });
+    describe("GET /api/messages/:id/count", function() {
+        function validQuery(queryParams) {
+            helpers.setFindOneResult("conversations", true, testConversation);
+            helpers.setCountResult("messages", true, 2);
+            return helpers.getMessageCount(testConversation._id, queryParams);
+        }
+        it("responds with status code 401 if user not authenticated", function() {
+            return helpers.getMessageCount(testConversation._id).then(function(response) {
+                assert.equal(response.statusCode, 401);
+            });
+        });
+        it("responds with status code 401 if user has an unrecognised session token", function() {
+            helpers.setSessionToken(testExpiredToken);
+            return helpers.getMessageCount(testConversation._id).then(function(response) {
+                assert.equal(response.statusCode, 401);
+            });
+        });
+        it("makes database requests with the conversation ID sent in the request body",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    return validQuery();
+                }).then(function(response) {
+                    assert.equal(helpers.getFindOneCallCount("conversations"), 1);
+                    assert.deepEqual(helpers.getFindAnyArgs("conversations", 0)[0], {
+                        _id: testConversation._id
+                    });
+                    assert.equal(helpers.getCountCallCount("messages"), 1);
+                    assert.deepEqual(helpers.getCountArgs("messages", 0)[0], {
+                        conversationID: testConversation._id
+                    });
+                });
+            }
+        );
+        it("attempts to find only messages newer than the query timestamp if one exists", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    return validQuery({
+                        timestamp: new Date(2016, 8, 24, 14, 5, 2).toISOString()
+                    });
+                }).then(function(response) {
+                    assert.equal(helpers.getCountCallCount("messages"), 1);
+                    assert.deepEqual(helpers.getCountArgs("messages", 0)[0], {
+                        conversationID: testConversation._id,
+                        timestamp: {
+                            $gt: new Date(2016, 8, 24, 14, 5, 2)
+                        }
+                    });
+                });
+            }
+        );
+        it("responds with status code 200 if user is authenticated, conversation exists, and user is a participant",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    return validQuery();
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 200);
+                });
+            }
+        );
+        it("responds with a body that is a JSON representation of the number of messages in the conversation if " +
+            "user is authenticated, conversation exists, and user is a participant",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    return validQuery();
+                }).then(function(response) {
+                    assert.deepEqual(JSON.parse(response.body), {count: 2});
+                });
+            }
+        );
+        it("responds with status code 500 if database error on find messages", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("conversations", true, testConversation);
+                helpers.setCountResult("messages", false, {err: "Database failure"});
+                return helpers.getMessageCount(testConversation._id);
+            }).then(function(response) {
+                assert.equal(response.statusCode, 500);
+            });
+        });
+        it("responds with status code 500 if database error on find message count", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("conversations", true, testConversation);
+                helpers.setCountResult("messages", false, {err: "Database failure"});
+                return helpers.getMessageCount(testConversation._id, {countOnly: true});
+            }).then(function(response) {
+                assert.equal(response.statusCode, 500);
+            });
+        });
+        it("responds with status code 403 if user is authenticated and conversation exists, but user is not a " +
+            "participant", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation2);
+                    helpers.setCountResult("messages", true, 2);
+                    return helpers.getMessageCount(testConversation2._id);
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 403);
+                });
+            }
+        );
+        it("responds with status code 500 if user is authenticated but conversation does not exist", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("conversations", true, null);
+                helpers.setCountResult("messages", true, 2);
+                return helpers.getMessageCount(testConversation._id);
+            }).then(function(response) {
+                assert.equal(response.statusCode, 500);
+            });
+        });
+        it("responds with status code 500 if database error on find conversation", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("conversations", false, {err: "Database failure"});
+                helpers.setCountResult("messages", true, 2);
+                return helpers.getMessageCount(testConversation._id);
             }).then(function(response) {
                 assert.equal(response.statusCode, 500);
             });

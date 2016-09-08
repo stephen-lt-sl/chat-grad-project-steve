@@ -283,6 +283,19 @@ module.exports.getMessages = function(conversationID, queryParams) {
     }
     return request(requestObject);
 };
+module.exports.getMessageCount = function(conversationID, queryParams) {
+    var requestUrl = baseUrl + "/api/messages/" + conversationID + "/count";
+    var requestObject = {
+        url: requestUrl,
+        jar: cookieJar,
+        simple: false,
+        resolveWithFullResponse: true
+    };
+    if (queryParams) {
+        requestObject.qs = queryParams;
+    }
+    return request(requestObject);
+};
 module.exports.getNotifications = function(conversationID, queryParams) {
     var requestUrl = baseUrl + "/api/notifications";
     var requestObject = {

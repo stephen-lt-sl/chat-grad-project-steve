@@ -12,32 +12,32 @@ module.exports = function(app, db, baseUrl) {
         var conversationID = req.params.id;
         var lastTimestamp = req.query.timestamp;
         var countOnly = req.query.countOnly;
-        conversations.find({
-            _id: conversationID
-        }).limit(1).next().then(function(conversation) {
-            if (!conversation) {
-                return Promise.reject(false);
-            }
-            if (conversation.participants.indexOf(senderID) === -1) {
-                res.sendStatus(403);
-                return Promise.resolve();
-            }
-            var queryObject = {conversationID: conversationID};
-            if (lastTimestamp) {
-                queryObject.timestamp = {$gt: new Date(lastTimestamp)};
-            }
-            if (countOnly) {
-                return messages.count(queryObject).then(function(count) {
-                    res.json({count: count});
-                });
-            } else {
-                return messages.find(queryObject).toArray().then(function(docs) {
-                    dbActions.clearNotifications(senderID, "new_messages", {conversationID: conversationID});
-                    res.json(docs.map(dbActions.cleanIdField));
-                });
-            }
-        }).catch(function(err) {
-            res.sendStatus(500);
+        findAndValidateConversation(senderID, {_id: conversationID}).then(function(conversation) {
+            var queryObject = messageQuery(conversationID, lastTimestamp);
+            return messages.find(queryObject).toArray().then(function(docs) {
+                dbActions.clearNotifications(senderID, "new_messages", {conversationID: conversationID});
+                res.json(docs.map(dbActions.cleanIdField));
+            }).catch(function(err) {
+                return Promise.reject(500);
+            });
+        }).catch(function(errorCode) {
+            res.sendStatus(errorCode);
+        });
+    });
+
+    app.get(baseUrl + "/messages/:id/count", function(req, res) {
+        var senderID = req.session.user;
+        var conversationID = req.params.id;
+        var lastTimestamp = req.query.timestamp;
+        findAndValidateConversation(senderID, {_id: conversationID}).then(function(conversation) {
+            var queryObject = messageQuery(conversationID, lastTimestamp);
+            return messages.count(queryObject).then(function(count) {
+                res.json({count: count});
+            }).catch(function(err) {
+                return Promise.reject(500);
+            });
+        }).catch(function(errorCode) {
+            res.sendStatus(errorCode);
         });
     });
 
@@ -49,17 +49,9 @@ module.exports = function(app, db, baseUrl) {
             res.sendStatus(201);
             return;
         }
-        conversations.find({
-            _id: conversationID
-        }).limit(1).next().then(function(conversation) {
-            if (!conversation) {
-                return Promise.reject(false);
-            }
-            if (conversation.participants.indexOf(senderID) === -1) {
-                res.sendStatus(403);
-            }
+        findAndValidateConversation(senderID, {_id: conversationID}).then(function(conversation) {
             var timestamp = new Date();
-            messages.insertOne({
+            return messages.insertOne({
                 senderID: senderID,
                 conversationID: conversationID,
                 contents: contents,
@@ -70,12 +62,34 @@ module.exports = function(app, db, baseUrl) {
                 addNewMessageNotification(conversation, message);
                 res.json(dbActions.cleanIdField(message));
             }).catch(function(err) {
-                res.sendStatus(500);
+                return Promise.reject(500);
             });
-        }).catch(function(err) {
-            res.sendStatus(500);
+        }).catch(function(errorCode) {
+            res.sendStatus(errorCode);
         });
     });
+
+    function messageQuery(conversationID, lastTimestamp) {
+        var queryObject = {conversationID: conversationID};
+        if (lastTimestamp) {
+            queryObject.timestamp = {$gt: new Date(lastTimestamp)};
+        }
+        return queryObject;
+    }
+
+    function findAndValidateConversation(senderID, query, projection) {
+        return conversations.find(query, projection).limit(1).next().catch(function(err) {
+            return Promise.reject(500);
+        }).then(function(conversation) {
+            if (!conversation) {
+                return Promise.reject(500);
+            }
+            if (conversation.participants.indexOf(senderID) === -1) {
+                return Promise.reject(403);
+            }
+            return conversation;
+        });
+    }
 
     // Insert a "new_messages" notification for each participant, or if such a notification already exists then
     // increment the messageCount
