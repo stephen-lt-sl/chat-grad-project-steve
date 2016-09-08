@@ -330,7 +330,7 @@ module.exports = function(port, db, githubAuthoriser) {
         return cleanObj;
     }
 
-    function clearNotification(userID, type, data) {
+    function clearNotifications(userID, type, data) {
         var notificationQuery = {
             userID: userID,
             type: type
@@ -338,7 +338,7 @@ module.exports = function(port, db, githubAuthoriser) {
         for (var key in data) {
             notificationQuery["data." + key] = data[key];
         }
-        notifications.deleteOne(notificationQuery);
+        notifications.deleteMany(notificationQuery);
     }
 
     return app.listen(port);

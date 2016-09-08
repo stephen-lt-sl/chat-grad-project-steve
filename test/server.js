@@ -659,14 +659,14 @@ describe("server", function() {
                 });
             }
         );
-        it("attempts to delete the 'new_message' notification for the user-conversation pair", function() {
+        it("attempts to delete the 'new_messages' notification for the user-conversation pair", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation);
                     helpers.setFindResult("messages", true, [testMessage, testMessage2]);
                     return helpers.getMessages(testConversation._id);
                 }).then(function(response) {
-                    assert.equal(helpers.getDeleteOneCallCount("notifications"), 1);
-                    assert.deepEqual(helpers.getDeleteOneArgs("notifications", 0)[0], {
+                    assert.equal(helpers.getDeleteManyCallCount("notifications"), 1);
+                    assert.deepEqual(helpers.getDeleteManyArgs("notifications", 0)[0], {
                         userID: testUser._id,
                         type: "new_messages",
                         "data.conversationID": testConversation._id
