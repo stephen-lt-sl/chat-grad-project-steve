@@ -4,6 +4,7 @@ var request = require("request");
 var assert = require("chai").assert;
 var sinon = require("sinon");
 var helpers = require("./serverHelpers");
+var ObjectID = require("mongodb").ObjectID;
 
 var testUser = {
     _id: "bob",
@@ -1047,7 +1048,7 @@ describe("server", function() {
             }).then(function(response) {
                 assert.equal(helpers.getFindOneCallCount("groups"), 1);
                 assert.deepEqual(helpers.getFindAnyArgs("groups", 0)[0], {
-                    _id: testGroup._id
+                    _id: new ObjectID(testGroup._id)
                 });
             });
         });
@@ -1059,7 +1060,7 @@ describe("server", function() {
             }).then(function(response) {
                 assert.equal(helpers.getFindOneAndUpdateCallCount("groups"), 1);
                 assert.deepEqual(helpers.getFindOneAndUpdateArgs("groups", 0)[0], {
-                    _id: testGroup._id
+                    _id: new ObjectID(testGroup._id)
                 });
             });
         });
