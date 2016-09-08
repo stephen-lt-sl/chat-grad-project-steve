@@ -261,6 +261,30 @@ module.exports = function(port, db, githubAuthoriser) {
         });
     });
 
+    app.get("/api/groups", function(req, res) {
+        var senderID = req.session.user;
+        var joinedOnly = req.query.joinedOnly;
+        var searchString = req.query.searchString;
+        var queryObject = {};
+        if (joinedOnly) {
+            queryObject.users = senderID;
+        }
+        if (searchString) {
+            queryObject.$text = {
+                $search: searchString
+            };
+        }
+        groups.find(queryObject).toArray().then(function(docs) {
+            var groupIDs = docs.map(function(group) {
+                return group._id;
+            });
+            clearNotifications(senderID, "group_changed", {groupID: {$in: groupIDs}});
+            res.json(docs.map(cleanIdField));
+        }).catch(function(err) {
+            res.sendStatus(500);
+        });
+    });
+
     app.post("/api/groups", function(req, res) {
         var groupInfo = req.body;
         var creatorID = req.session.user;
