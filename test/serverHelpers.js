@@ -325,18 +325,52 @@ module.exports.postGroup = function(name, description) {
         resolveWithFullResponse: true
     });
 };
-module.exports.putGroup = function(id, groupInfo, newUsers, removedUsers) {
-    var requestUrl = baseUrl + "/api/groups/" + id;
+module.exports.updateGroup = function(id, groupInfo) {
+    var requestUrl = baseUrl + "/api/groups/" + id + "/update";
     return request.put({
         url: requestUrl,
         headers: {
             "Content-type": "application/json"
         },
-        body: JSON.stringify({
-            groupInfo: groupInfo,
-            newUsers: newUsers,
-            removedUsers: removedUsers
-        }),
+        body: JSON.stringify(groupInfo),
+        jar: cookieJar,
+        simple: false,
+        resolveWithFullResponse: true
+    });
+};
+module.exports.inviteToGroup = function(id, newUsers) {
+    var requestUrl = baseUrl + "/api/groups/" + id + "/invite";
+    return request.put({
+        url: requestUrl,
+        headers: {
+            "Content-type": "application/json"
+        },
+        body: JSON.stringify(newUsers),
+        jar: cookieJar,
+        simple: false,
+        resolveWithFullResponse: true
+    });
+};
+module.exports.removeFromGroup = function(id, removedUsers) {
+    var requestUrl = baseUrl + "/api/groups/" + id + "/remove";
+    return request.put({
+        url: requestUrl,
+        headers: {
+            "Content-type": "application/json"
+        },
+        body: JSON.stringify(removedUsers),
+        jar: cookieJar,
+        simple: false,
+        resolveWithFullResponse: true
+    });
+};
+module.exports.joinGroup = function(id) {
+    var requestUrl = baseUrl + "/api/groups/" + id + "/join";
+    return request.put({
+        url: requestUrl,
+        headers: {
+            "Content-type": "application/json"
+        },
         jar: cookieJar,
         simple: false,
         resolveWithFullResponse: true

@@ -53,47 +53,13 @@ module.exports = function(app, db, baseUrl) {
         });
     });
 
-    app.put(baseUrl + "/groups/:id", function(req, res) {
+    app.put(baseUrl + "/groups/:id/update", function(req, res) {
+        var userID = req.session.user;
         var groupID = req.params.id;
-        var groupInfo = req.body.groupInfo;
-        var newUsers = req.body.newUsers;
-        var removedUsers = req.body.removedUsers;
+        var groupInfo = req.body;
         var queryObject = {_id: new ObjectID(groupID)};
-        groups.find(queryObject).limit(1).next().then(function(group) {
-            if (!group) {
-                res.sendStatus(404);
-                return Promise.resolve();
-            }
-            if (group.users.indexOf(req.session.user) === -1) {
-                res.sendStatus(403);
-                return Promise.resolve();
-            }
-            // For now, only allow users to remove themselves from a group
-            if (removedUsers && (removedUsers.length !== 1 || removedUsers[0] !== req.session.user)) {
-                res.sendStatus(409);
-                return Promise.resolve();
-            }
-            var updateObject = groupUpdateQuery(group, req.session.user, newUsers, removedUsers, groupInfo);
-            return groups.findOneAndUpdate(queryObject, updateObject, {
-                returnOriginal: false
-            }).then(function(updateResult) {
-                res.json(dbActions.cleanIdField(updateResult.value));
-            });
-        }).catch(function(err) {
-            res.sendStatus(500);
-        });
-    });
-
-    function groupUpdateQuery(group, senderID, newUsers, removedUsers, groupInfo) {
-        var updateObject = {};
-        if (newUsers) {
-            updateObject.$addToSet = {users: {$each: newUsers}};
-        }
-        if (removedUsers) {
-            updateObject.$pull = {users: {$in: removedUsers}};
-        }
-        if (groupInfo) {
-            updateObject.$set = {};
+        findAndValidateGroup(userID, queryObject).then(function(group) {
+            var updateObject = {$set: {}};
             for (var item in groupInfo) {
                 // Don't update any fields that don't exist, the _id field (locked), or the users field
                 // (limited access)
@@ -101,8 +67,82 @@ module.exports = function(app, db, baseUrl) {
                     updateObject.$set[item] = groupInfo[item];
                 }
             }
-        }
-        return updateObject;
+            return updateGroup(queryObject, updateObject).then(function(updatedGroup) {
+                res.json(updatedGroup);
+            });
+        }).catch(function(errorCode) {
+            res.sendStatus(errorCode);
+        });
+    });
+
+    app.put(baseUrl + "/groups/:id/invite", function(req, res) {
+        var userID = req.session.user;
+        var groupID = req.params.id;
+        var newUsers = req.body;
+        var queryObject = {_id: new ObjectID(groupID)};
+        findAndValidateGroup(userID, queryObject).then(function(group) {
+            return updateGroup(queryObject, {$addToSet: {users: {$each: newUsers}}}).then(function(updatedGroup) {
+                res.json(updatedGroup);
+            });
+        }).catch(function(errorCode) {
+            res.sendStatus(errorCode);
+        });
+    });
+
+    app.put(baseUrl + "/groups/:id/remove", function(req, res) {
+        var userID = req.session.user;
+        var groupID = req.params.id;
+        var removedUsers = req.body;
+        var queryObject = {_id: new ObjectID(groupID)};
+        findAndValidateGroup(userID, queryObject).then(function(group) {
+            // For now, only allow users to remove themselves from a group
+            if (removedUsers && (removedUsers.length !== 1 || removedUsers[0] !== userID)) {
+                return Promise.reject(409);
+            }
+            return updateGroup(queryObject, {$pull: {users: {$in: removedUsers}}}).then(function(updatedGroup) {
+                res.json(updatedGroup);
+            });
+        }).catch(function(errorCode) {
+            res.sendStatus(errorCode);
+        });
+    });
+
+    app.put(baseUrl + "/groups/:id/join", function(req, res) {
+        var userID = req.session.user;
+        var groupID = req.params.id;
+        var queryObject = {_id: new ObjectID(groupID)};
+        findAndValidateGroup(userID, queryObject, {}, false).then(function(group) {
+            return updateGroup(queryObject, {$addToSet: {users: userID}}).then(function(updatedGroup) {
+                res.json(updatedGroup);
+            });
+        }).catch(function(errorCode) {
+            res.sendStatus(errorCode);
+        });
+    });
+
+    function updateGroup(query, update) {
+        return groups.findOneAndUpdate(query, update, {
+            returnOriginal: false
+        }).catch(function(err) {
+            return Promise.reject(500);
+        }).then(function(updateResult) {
+            return dbActions.cleanIdField(updateResult.value);
+        });
+    }
+
+    function findAndValidateGroup(senderID, query, projection, membershipRequired) {
+        membershipRequired = membershipRequired !== false;
+        return groups.find(query, projection).limit(1).next().catch(function(err) {
+            return Promise.reject(500);
+        }).then(function(group) {
+            if (!group) {
+                return Promise.reject(404);
+            }
+            if (membershipRequired && group.users.indexOf(senderID) === -1) {
+                return Promise.reject(403);
+            }
+            return group;
+        });
     }
 
 };
