@@ -325,7 +325,7 @@ module.exports.postGroup = function(name, description) {
         resolveWithFullResponse: true
     });
 };
-module.exports.putGroup = function(id, groupInfo, newUsers) {
+module.exports.putGroup = function(id, groupInfo, newUsers, removedUsers) {
     var requestUrl = baseUrl + "/api/groups/" + id;
     return request.put({
         url: requestUrl,
@@ -334,7 +334,8 @@ module.exports.putGroup = function(id, groupInfo, newUsers) {
         },
         body: JSON.stringify({
             groupInfo: groupInfo,
-            newUsers: newUsers
+            newUsers: newUsers,
+            removedUsers: removedUsers
         }),
         jar: cookieJar,
         simple: false,

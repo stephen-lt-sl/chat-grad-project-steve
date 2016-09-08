@@ -1067,7 +1067,7 @@ describe("server", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("groups", true, testGroup);
                 helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
-                return helpers.putGroup(testGroup._id, {name: "New Test Group"}, ["charlie"]);
+                return helpers.putGroup(testGroup._id, {name: "New Test Group"}, ["charlie"], ["bob"]);
             }).then(function(response) {
                 assert.equal(helpers.getFindOneAndUpdateCallCount("groups"), 1);
                 assert.deepEqual(helpers.getFindOneAndUpdateArgs("groups", 0)[1], {
@@ -1076,6 +1076,9 @@ describe("server", function() {
                     },
                     $set: {
                         name: "New Test Group"
+                    },
+                    $pull: {
+                        users: {$in: ["bob"]}
                     }
                 });
             });
@@ -1127,6 +1130,23 @@ describe("server", function() {
                 });
             });
         });
+        it("does not attempt to perform a `pull` update if removedUsers not defined", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("groups", true, testGroup);
+                helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                return helpers.putGroup(testGroup._id, {name: "New Test Group"}, ["charlie"], undefined);
+            }).then(function(response) {
+                assert.equal(helpers.getFindOneAndUpdateCallCount("groups"), 1);
+                assert.deepEqual(helpers.getFindOneAndUpdateArgs("groups", 0)[1], {
+                    $addToSet: {
+                        users: {$each: ["charlie"]}
+                    },
+                    $set: {
+                        name: "New Test Group"
+                    }
+                });
+            });
+        });
         it("responds with status code 200 if user is authenticated, group exists, and user is member of group",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
@@ -1162,6 +1182,28 @@ describe("server", function() {
                     return helpers.putGroup(testGroup._id, {name: "New Test Group"}, ["charlie"]);
                 }).then(function(response) {
                     assert.equal(response.statusCode, 403);
+                });
+            }
+        );
+        it("responds with status code 409 if user is authenticated, group exists, user is member of group, and user " +
+            "attempts to remove a different user", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("groups", true, testGroup);
+                    helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                    return helpers.putGroup(testGroup._id, {name: "New Test Group"}, ["charlie"], ["charlie"]);
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 409);
+                });
+            }
+        );
+        it("responds with status code 409 if user is authenticated, group exists, user is member of group, and user " +
+            "attempts to remove more than one user", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("groups", true, testGroup);
+                    helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                    return helpers.putGroup(testGroup._id, {name: "New Test Group"}, ["charlie"], ["bob", "charlie"]);
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 409);
                 });
             }
         );
