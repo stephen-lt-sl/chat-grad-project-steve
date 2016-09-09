@@ -13,9 +13,10 @@ module.exports = function(db) {
         findGroups: findGroups,
         findAndValidateGroup: findAndValidateGroup,
         validateGroupName: validateGroupName,
+        createGroup: createGroup,
         updateGroupInfo: updateGroupInfo,
         addGroupUsers: addGroupUsers,
-        createGroup: createGroup,
+        removeGroupUsers: removeGroupUsers,
         cleanIdField: cleanIdField,
         clearNotifications: clearNotifications
     };
