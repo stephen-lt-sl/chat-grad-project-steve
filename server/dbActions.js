@@ -11,6 +11,8 @@ module.exports = function(db) {
 
     return {
         addNewMessageNotification: addNewMessageNotification,
+        findAndValidateUsers: findAndValidateUsers,
+        createConversation: createConversation,
         findAndValidateConversation: findAndValidateConversation,
         updateConversationTimestamp: updateConversationTimestamp,
         findMessages: findMessages,
@@ -55,13 +57,36 @@ module.exports = function(db) {
         return Promise.all(notificationPromises);
     }
 
+    function findAndValidateUsers(userIDs) {
+        var findPromises = [];
+        userIDs.forEach(function(userID, idx) {
+            findPromises.push(users.find({
+                _id: userID
+            }).limit(1).next().catch(function(err) {
+                return Promise.reject(500);
+            }).then(function(foundUser) {
+                if (!foundUser) {
+                    return Promise.reject(404);
+                }
+                return foundUser;
+            }));
+        });
+        return Promise.all(findPromises);
+    }
+
+    function createConversation(conversation) {
+        return conversations.insertOne(conversation).catch(function(err) {
+            return Promise.reject(500);
+        });
+    }
+
     function findAndValidateConversation(conversationID, options) {
         var queryObject = {_id: conversationID};
         return conversations.find(queryObject).limit(1).next().catch(function(err) {
             return Promise.reject(500);
         }).then(function(conversation) {
             if (!conversation) {
-                return Promise.reject(500);
+                return Promise.reject(404);
             }
             if (options.requiredParticipant && conversation.participants.indexOf(options.requiredParticipant) === -1) {
                 return Promise.reject(403);
@@ -207,7 +232,9 @@ module.exports = function(db) {
         for (var key in data) {
             notificationQuery["data." + key] = data[key];
         }
-        notifications.deleteMany(notificationQuery);
+        return notifications.deleteMany(notificationQuery).catch(function(err) {
+            return Promise.reject(500);
+        });
     }
 
     // Returns a copy of the input with the "_id" field renamed to "id"
