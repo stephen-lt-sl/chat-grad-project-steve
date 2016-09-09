@@ -56,14 +56,14 @@ module.exports = function(app, db, baseUrl) {
                 conversationID: conversationID,
                 contents: contents,
                 timestamp: timestamp
+            }).then(function(result) {
+                var message = result.ops[0];
+                updateConversation(conversation, message);
+                addNewMessageNotification(conversation, message);
+                res.json(dbActions.cleanIdField(message));
             }).catch(function(err) {
                 return Promise.reject(500);
             });
-        }).then(function(result) {
-            var message = result.ops[0];
-            updateConversation(conversation, message);
-            addNewMessageNotification(conversation, message);
-            res.json(dbActions.cleanIdField(message));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
