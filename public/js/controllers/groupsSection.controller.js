@@ -65,7 +65,7 @@
         }
 
         function joinGroup(groupID) {
-            return chatDataService.addGroupMember(groupID, $scope.user()._id);
+            return chatDataService.joinGroup(groupID);
         }
 
         function startEditGroup() {
@@ -108,7 +108,7 @@
                 return user.name === recipientUsername;
             });
             if (recipient) {
-                return chatDataService.addGroupMember(vm.currentGroup.id, recipient.id);
+                return chatDataService.inviteUserToGroup(vm.currentGroup.id, recipient.id);
             } else {
                 return Promise.reject();
             }
