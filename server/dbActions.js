@@ -12,6 +12,9 @@ module.exports = function(db) {
     return {
         getUserNotifications: getUserNotifications,
         addNewMessageNotification: addNewMessageNotification,
+        createUser: createUser,
+        findUsers: findUsers,
+        findAndValidateUser: findAndValidateUser,
         findAndValidateUsers: findAndValidateUsers,
         createConversation: createConversation,
         findAndValidateConversation: findAndValidateConversation,
@@ -66,6 +69,33 @@ module.exports = function(db) {
         return Promise.all(notificationPromises);
     }
 
+    function createUser(user) {
+        return users.insertOne(user).then(function(result) {
+            return result.ops[0];
+        }).catch(function(err) {
+            return Promise.reject(500);
+        });
+    }
+
+    function findUsers() {
+        return users.find().toArray().catch(function(err) {
+            res.sendStatus(500);
+        });
+    }
+
+    function findAndValidateUser(userID) {
+        return users.find({
+            _id: userID
+        }).limit(1).next().then(function(user) {
+            if (!user) {
+                return Promise.reject(404);
+            }
+            return user;
+        }).catch(function(err) {
+            res.sendStatus(500);
+        });
+    }
+
     function findAndValidateUsers(userIDs) {
         var findPromises = [];
         userIDs.forEach(function(userID, idx) {
@@ -84,7 +114,9 @@ module.exports = function(db) {
     }
 
     function createConversation(conversation) {
-        return conversations.insertOne(conversation).catch(function(err) {
+        return conversations.insertOne(conversation).then(function(result) {
+            return result.ops[0];
+        }).catch(function(err) {
             return Promise.reject(500);
         });
     }
@@ -131,7 +163,9 @@ module.exports = function(db) {
     }
 
     function createMessage(message) {
-        return messages.insertOne(message).catch(function(err) {
+        return messages.insertOne(message).then(function(result) {
+            return result.ops[0];
+        }).catch(function(err) {
             return Promise.reject(500);
         });
     }
@@ -180,7 +214,9 @@ module.exports = function(db) {
     }
 
     function createGroup(group) {
-        return groups.insertOne(group).catch(function(err) {
+        return groups.insertOne(group).then(function(resut) {
+            return result.ops[0];
+        }).catch(function(err) {
             return Promise.reject(500);
         });
     }

@@ -24,8 +24,8 @@ module.exports = function(app, db, baseUrl) {
                 _id: conversationID,
                 participants: participants
             });
-        }).then(function(result) {
-            res.json(dbActions.cleanIdField(result.ops[0]));
+        }).then(function(conversation) {
+            res.json(dbActions.cleanIdField(conversation));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
