@@ -79,20 +79,20 @@ module.exports = function(db) {
 
     function findUsers() {
         return users.find().toArray().catch(function(err) {
-            res.sendStatus(500);
+            return Promise.reject(500);
         });
     }
 
     function findAndValidateUser(userID) {
         return users.find({
             _id: userID
-        }).limit(1).next().then(function(user) {
+        }).limit(1).next().catch(function(err) {
+            return Promise.reject(500);
+        }).then(function(user) {
             if (!user) {
                 return Promise.reject(404);
             }
             return user;
-        }).catch(function(err) {
-            res.sendStatus(500);
         });
     }
 
@@ -148,6 +148,7 @@ module.exports = function(db) {
     }
 
     function findMessages(conversationID, options) {
+        options = options || {};
         var queryObject = {conversationID: conversationID};
         if (options.lastTimestamp) {
             queryObject.timestamp = {$gt: new Date(options.lastTimestamp)};
@@ -172,6 +173,7 @@ module.exports = function(db) {
     }
 
     function findGroups(options) {
+        options = options || {};
         var queryObject = {};
         if (options.isMember) {
             queryObject.users = options.isMember;

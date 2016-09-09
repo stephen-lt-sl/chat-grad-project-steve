@@ -1290,6 +1290,18 @@ describe("server", function() {
                 });
             }
         );
+        it("responds with status code 409 if user is authenticated, group exists, but updated name already in use",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("groups", true, testGroup, 0);
+                    helpers.setFindOneResult("groups", true, testGroup, 1);
+                    helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                    return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 409);
+                });
+            }
+        );
         it("responds with status code 404 if user is authenticated, but group does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("groups", true, null, 0);
@@ -1325,7 +1337,7 @@ describe("server", function() {
         it("responds with status code 500 if database error on findOne during group validation", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("groups", false, {err: "Database failure"}, 0);
-                helpers.setFindOneResult("groups", true, testGroup, 1);
+                helpers.setFindOneResult("groups", true, null, 1);
                 helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
                 return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
             }).then(function(response) {

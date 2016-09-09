@@ -32,8 +32,8 @@ module.exports = function(app, db, baseUrl) {
                 description: groupInfo.description,
                 users: [creatorID]
             });
-        }).then(function(result) {
-            res.json(dbActions.cleanIdField(result));
+        }).then(function(group) {
+            res.json(dbActions.cleanIdField(group));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
