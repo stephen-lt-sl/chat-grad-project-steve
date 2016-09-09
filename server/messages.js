@@ -14,12 +14,12 @@ module.exports = function(app, db, baseUrl) {
         var countOnly = req.query.countOnly;
         findAndValidateConversation(senderID, {_id: conversationID}).then(function(conversation) {
             var queryObject = messageQuery(conversationID, lastTimestamp);
-            return messages.find(queryObject).toArray().then(function(docs) {
-                dbActions.clearNotifications(senderID, "new_messages", {conversationID: conversationID});
-                res.json(docs.map(dbActions.cleanIdField));
-            }).catch(function(err) {
+            return messages.find(queryObject).toArray().catch(function(err) {
                 return Promise.reject(500);
             });
+        }).then(function(docs) {
+            dbActions.clearNotifications(senderID, "new_messages", {conversationID: conversationID});
+            res.json(docs.map(dbActions.cleanIdField));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
@@ -31,11 +31,11 @@ module.exports = function(app, db, baseUrl) {
         var lastTimestamp = req.query.timestamp;
         findAndValidateConversation(senderID, {_id: conversationID}).then(function(conversation) {
             var queryObject = messageQuery(conversationID, lastTimestamp);
-            return messages.count(queryObject).then(function(count) {
-                res.json({count: count});
-            }).catch(function(err) {
+            return messages.count(queryObject).catch(function(err) {
                 return Promise.reject(500);
             });
+        }).then(function(count) {
+            res.json({count: count});
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
@@ -56,14 +56,14 @@ module.exports = function(app, db, baseUrl) {
                 conversationID: conversationID,
                 contents: contents,
                 timestamp: timestamp
-            }).then(function(result) {
-                var message = result.ops[0];
-                updateConversation(conversation, message);
-                addNewMessageNotification(conversation, message);
-                res.json(dbActions.cleanIdField(message));
             }).catch(function(err) {
                 return Promise.reject(500);
             });
+        }).then(function(result) {
+            var message = result.ops[0];
+            updateConversation(conversation, message);
+            addNewMessageNotification(conversation, message);
+            res.json(dbActions.cleanIdField(message));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });

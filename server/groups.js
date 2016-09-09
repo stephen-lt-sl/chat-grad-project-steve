@@ -67,9 +67,9 @@ module.exports = function(app, db, baseUrl) {
                     updateObject.$set[item] = groupInfo[item];
                 }
             }
-            return updateGroup(queryObject, updateObject).then(function(updatedGroup) {
-                res.json(updatedGroup);
-            });
+            return updateGroup(queryObject, updateObject);
+        }).then(function(updatedGroup) {
+            res.json(updatedGroup);
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
@@ -81,9 +81,9 @@ module.exports = function(app, db, baseUrl) {
         var newUsers = req.body;
         var queryObject = {_id: new ObjectID(groupID)};
         findAndValidateGroup(userID, queryObject).then(function(group) {
-            return updateGroup(queryObject, {$addToSet: {users: {$each: newUsers}}}).then(function(updatedGroup) {
-                res.json(updatedGroup);
-            });
+            return updateGroup(queryObject, {$addToSet: {users: {$each: newUsers}}});
+        }).then(function(updatedGroup) {
+            res.json(updatedGroup);
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
@@ -99,9 +99,9 @@ module.exports = function(app, db, baseUrl) {
             if (removedUsers && (removedUsers.length !== 1 || removedUsers[0] !== userID)) {
                 return Promise.reject(409);
             }
-            return updateGroup(queryObject, {$pull: {users: {$in: removedUsers}}}).then(function(updatedGroup) {
-                res.json(updatedGroup);
-            });
+            return updateGroup(queryObject, {$pull: {users: {$in: removedUsers}}});
+        }).then(function(updatedGroup) {
+            res.json(updatedGroup);
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
@@ -112,9 +112,9 @@ module.exports = function(app, db, baseUrl) {
         var groupID = req.params.id;
         var queryObject = {_id: new ObjectID(groupID)};
         findAndValidateGroup(userID, queryObject, {}, false).then(function(group) {
-            return updateGroup(queryObject, {$addToSet: {users: userID}}).then(function(updatedGroup) {
-                res.json(updatedGroup);
-            });
+            return updateGroup(queryObject, {$addToSet: {users: userID}});
+        }).then(function(updatedGroup) {
+            res.json(updatedGroup);
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
