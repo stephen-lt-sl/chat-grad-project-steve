@@ -19,43 +19,34 @@ module.exports = function(port, db, githubAuthoriser) {
 
     var dbActions = require("./dbActions")(db);
 
-    var users = db.collection("users");
-    var conversations = db.collection("conversations");
-    var messages = db.collection("messages");
-    var notifications = db.collection("notifications");
-    var groups = db.collection("groups");
     var sessions = {};
 
     app.get("/oauth", function(req, res) {
         githubAuthoriser.authorise(req, function(githubUser, token) {
-            if (githubUser) {
-                users.find({
-                    _id: githubUser.login
-                }).limit(1).next().then(function(user) {
-                    // Adds the user to the DB if they do not exist
-                    // On resolution, returns the user as they appear in the DB
-                    if (!user) {
-                        return users.insertOne({
-                            _id: githubUser.login,
-                            name: githubUser.name,
-                            avatarUrl: githubUser.avatar_url
-                        }).then(function(result) {
-                            return result.ops[0];
-                        });
-                    }
-                    return user;
-                }).then(function(user) {
-                    // Creates a session for the user and redirects the client to the correct page
-                    sessions[token] = {
-                        user: githubUser.login
-                    };
-                    res.cookie("sessionToken", token);
-                    res.header("Location", "/");
-                    res.sendStatus(302);
-                });
-            } else {
+            if (!githubUser) {
                 res.sendStatus(400);
+                return;
             }
+            dbActions.findAndValidateUser(githubUser.login).catch(function(errorCode) {
+                if (errorCode === 404) {
+                    return dbActions.createUser({
+                        _id: githubUser.login,
+                        name: githubUser.name,
+                        avatarUrl: githubUser.avatar_url
+                    });
+                }
+                return Promise.reject(errorCode);
+            }).then(function(user) {
+                // Creates a session for the user and redirects the client to the correct page
+                sessions[token] = {
+                    user: githubUser.login
+                };
+                res.cookie("sessionToken", token);
+                res.header("Location", "/");
+                res.sendStatus(302);
+            }).catch(function(errorCode) {
+                res.sendStatus(errorCode);
+            });
         });
     });
 
@@ -79,20 +70,18 @@ module.exports = function(port, db, githubAuthoriser) {
     });
 
     app.get("/api/user", function(req, res) {
-        users.find({
-            _id: req.session.user
-        }).limit(1).next().then(function(user) {
+        dbActions.findAndValidateUser(req.session.user).then(function(user) {
             res.json(user);
-        }).catch(function(err) {
-            res.sendStatus(500);
+        }).catch(function(errorCode) {
+            res.sendStatus(errorCode);
         });
     });
 
     app.get("/api/users", function(req, res) {
-        users.find().toArray().then(function(docs) {
+        dbActions.findUsers().then(function(docs) {
             res.json(docs.map(dbActions.cleanIdField));
-        }).catch(function(err) {
-            res.sendStatus(500);
+        }).catch(function(errorCode) {
+            res.sendStatus(errorCode);
         });
     });
 
