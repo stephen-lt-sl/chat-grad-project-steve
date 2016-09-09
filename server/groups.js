@@ -9,7 +9,10 @@ module.exports = function(app, db, baseUrl) {
         var senderID = req.session.user;
         var joinedOnly = req.query.joinedOnly;
         var searchString = req.query.searchString;
-        dbActions.findGroups({joinedOnly: joinedOnly, searchString: searchString}).then(function(docs) {
+        dbActions.findGroups({
+            isMember: joinedOnly ? senderID : undefined,
+            searchString: searchString
+        }).then(function(docs) {
             var groupIDs = docs.map(function(group) {
                 return group._id;
             });
@@ -23,7 +26,7 @@ module.exports = function(app, db, baseUrl) {
     app.post(baseUrl + "/groups", function(req, res) {
         var groupInfo = req.body;
         var creatorID = req.session.user;
-        validateGroupName(groupInfo.name).then(function(){
+        dbActions.validateGroupName(groupInfo.name).then(function() {
             return dbActions.createGroup({
                 name: groupInfo.name,
                 description: groupInfo.description,
@@ -31,8 +34,8 @@ module.exports = function(app, db, baseUrl) {
             });
         }).then(function(group) {
             res.json(dbActions.cleanIdField(group));
-        }).catch(function(err) {
-            res.sendStatus(500);
+        }).catch(function(errorCode) {
+            res.sendStatus(errorCode);
         });
     });
 
@@ -45,7 +48,7 @@ module.exports = function(app, db, baseUrl) {
                 return dbActions.validateGroupName(groupInfo.name);
             }
         }).then(function() {
-            return dbActions.updateGroupInfo(groupID, groupInfo);
+            return dbActions.updateGroupInfo(groupID, groupInfo, ["name", "description"]);
         }).then(function(updatedGroup) {
             res.json(updatedGroup);
         }).catch(function(errorCode) {

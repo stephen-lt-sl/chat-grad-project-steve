@@ -58,7 +58,7 @@ module.exports = function(app, db, baseUrl) {
                 contents: contents,
                 timestamp: timestamp
             }).then(function(message) {
-                dbActions.updateConversationTimestamp(conversation, timestamp);
+                dbActions.updateConversationTimestamp(conversation, message.timestamp);
                 dbActions.addNewMessageNotification(conversation, message);
                 res.json(dbActions.cleanIdField(message));
             });

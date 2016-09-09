@@ -383,14 +383,14 @@ describe("server", function() {
                 });
             }
         );
-        it("responds with status code 500 if user is authenticated and sender does not exist", function() {
+        it("responds with status code 404 if user is authenticated and sender does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("users", true, null, 0);
                 helpers.setFindOneResult("users", true, testUser2, 1);
                 helpers.setInsertOneResult("conversations", true, testConversation);
                 return helpers.postConversation(testUser2._id);
             }).then(function(response) {
-                assert.equal(response.statusCode, 500);
+                assert.equal(response.statusCode, 404);
             });
         });
         it("responds with status code 500 if user is authenticated and database error on find sender", function() {
@@ -403,14 +403,14 @@ describe("server", function() {
                 assert.equal(response.statusCode, 500);
             });
         });
-        it("responds with status code 500 if user is authenticated and recipient does not exist", function() {
+        it("responds with status code 404 if user is authenticated and recipient does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("users", true, testUser, 0);
                 helpers.setFindOneResult("users", true, null, 1);
                 helpers.setInsertOneResult("conversations", true, testConversation);
                 return helpers.postConversation(testUser2._id);
             }).then(function(response) {
-                assert.equal(response.statusCode, 500);
+                assert.equal(response.statusCode, 404);
             });
         });
         it("responds with status code 500 if user is authenticated and database error on find " +
@@ -454,6 +454,8 @@ describe("server", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation);
                     helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    helpers.setUpdateOneResult("conversations", true, null);
                     beforeTimestamp = new Date();
                     return helpers.postMessage(testMessage.conversationID, testMessage.contents);
                 }).then(function(response) {
@@ -472,6 +474,8 @@ describe("server", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation);
                     helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    helpers.setUpdateOneResult("conversations", true, null);
                     return helpers.postMessage(testMessage.conversationID, testMessage.contents);
                 }).then(function(response) {
                     assert.equal(helpers.getUpdateOneCallCount("notifications"), 2);
@@ -516,6 +520,8 @@ describe("server", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation);
                     helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    helpers.setUpdateOneResult("conversations", true, null);
                     return helpers.postMessage(testMessage.conversationID, "");
                 }).then(function(response) {
                     assert.equal(response.statusCode, 201);
@@ -528,6 +534,8 @@ describe("server", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation);
                     helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    helpers.setUpdateOneResult("conversations", true, null);
                     return helpers.postMessage(testMessage.conversationID, testMessage.contents);
                 }).then(function(response) {
                     assert.equal(response.statusCode, 200);
@@ -540,6 +548,8 @@ describe("server", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation);
                     helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    helpers.setUpdateOneResult("conversations", true, null);
                     return helpers.postMessage(testMessage.conversationID, testMessage.contents);
                 }).then(function(response) {
                     assert.equal(helpers.getUpdateOneCallCount("conversations"), 1);
@@ -559,6 +569,8 @@ describe("server", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation);
                     helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    helpers.setUpdateOneResult("conversations", true, null);
                     return helpers.postMessage(testMessage.conversationID, testMessage.contents);
                 }).then(function(response) {
                     var receivedMessage = JSON.parse(response.body);
@@ -569,13 +581,15 @@ describe("server", function() {
                 });
             }
         );
-        it("responds with status code 500 if user is authenticated and conversation does not exist", function() {
+        it("responds with status code 404 if user is authenticated and conversation does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", true, null);
                 helpers.setInsertOneResult("messages", true, testMessage);
+                helpers.setUpdateOneResult("notifications", true, null);
+                helpers.setUpdateOneResult("conversations", true, null);
                 return helpers.postMessage(testMessage.conversationID, testMessage.contents);
             }).then(function(response) {
-                assert.equal(response.statusCode, 500);
+                assert.equal(response.statusCode, 404);
             });
         });
         it("responds with status code 500 if user is authenticated and database error on find conversation",
@@ -583,6 +597,8 @@ describe("server", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", false, {err: "Database failure"});
                     helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    helpers.setUpdateOneResult("conversations", true, null);
                     return helpers.postMessage(testMessage.conversationID, testMessage.contents);
                 }).then(function(response) {
                     assert.equal(response.statusCode, 500);
@@ -594,6 +610,8 @@ describe("server", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation2);
                     helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    helpers.setUpdateOneResult("conversations", true, null);
                     return helpers.postMessage(testConversation2._id, testMessage.contents);
                 }).then(function(response) {
                     assert.equal(response.statusCode, 403);
@@ -605,6 +623,8 @@ describe("server", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation);
                     helpers.setInsertOneResult("messages", false, {err: "Database failure"});
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    helpers.setUpdateOneResult("conversations", true, null);
                     return helpers.postMessage(testMessage.conversationID, testMessage.contents);
                 }).then(function(response) {
                     assert.equal(response.statusCode, 500);
@@ -616,6 +636,7 @@ describe("server", function() {
         function validQuery(queryParams) {
             helpers.setFindOneResult("conversations", true, testConversation);
             helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+            helpers.setDeleteManyResult("notifications", true, null);
             return helpers.getMessages(testConversation._id, queryParams);
         }
         it("responds with status code 401 if user not authenticated", function() {
@@ -711,6 +732,7 @@ describe("server", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", true, testConversation);
                 helpers.setFindResult("messages", false, {err: "Database failure"});
+                helpers.setDeleteManyResult("notifications", true, null);
                 return helpers.getMessages(testConversation._id);
             }).then(function(response) {
                 assert.equal(response.statusCode, 500);
@@ -721,25 +743,28 @@ describe("server", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("conversations", true, testConversation2);
                     helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                    helpers.setDeleteManyResult("notifications", true, null);
                     return helpers.getMessages(testConversation2._id);
                 }).then(function(response) {
                     assert.equal(response.statusCode, 403);
                 });
             }
         );
-        it("responds with status code 500 if user is authenticated but conversation does not exist", function() {
+        it("responds with status code 404 if user is authenticated but conversation does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", true, null);
                 helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                helpers.setDeleteManyResult("notifications", true, null);
                 return helpers.getMessages(testConversation._id);
             }).then(function(response) {
-                assert.equal(response.statusCode, 500);
+                assert.equal(response.statusCode, 404);
             });
         });
         it("responds with status code 500 if database error on find conversation", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", false, {err: "Database failure"});
                 helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                helpers.setDeleteManyResult("notifications", true, null);
                 return helpers.getMessages(testConversation._id);
             }).then(function(response) {
                 assert.equal(response.statusCode, 500);
@@ -843,13 +868,13 @@ describe("server", function() {
                 });
             }
         );
-        it("responds with status code 500 if user is authenticated but conversation does not exist", function() {
+        it("responds with status code 404 if user is authenticated but conversation does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", true, null);
                 helpers.setCountResult("messages", true, 2);
                 return helpers.getMessageCount(testConversation._id);
             }).then(function(response) {
-                assert.equal(response.statusCode, 500);
+                assert.equal(response.statusCode, 404);
             });
         });
         it("responds with status code 500 if database error on find conversation", function() {
@@ -942,6 +967,7 @@ describe("server", function() {
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindResult("groups", true, [testGroup]);
+                    helpers.setDeleteManyResult("notifications", true, null);
                     return helpers.getGroups();
                 }).then(function(response) {
                     assert.equal(helpers.getFindCallCount("groups"), 1);
@@ -953,6 +979,7 @@ describe("server", function() {
             "parameter is set to true", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindResult("groups", true, [testGroup]);
+                    helpers.setDeleteManyResult("notifications", true, null);
                     return helpers.getGroups({joinedOnly: true});
                 }).then(function(response) {
                     assert.equal(helpers.getFindCallCount("groups"), 1);
@@ -966,6 +993,7 @@ describe("server", function() {
             "`searchString` query parameter is set", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindResult("groups", true, [testGroup]);
+                    helpers.setDeleteManyResult("notifications", true, null);
                     return helpers.getGroups({searchString: "Test Group"});
                 }).then(function(response) {
                     assert.equal(helpers.getFindCallCount("groups"), 1);
@@ -980,6 +1008,7 @@ describe("server", function() {
         it("attempts to delete any of the user's 'group_changed' notifications for the groups found", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindResult("groups", true, [testGroup]);
+                    helpers.setDeleteManyResult("notifications", true, null);
                     return helpers.getGroups();
                 }).then(function(response) {
                     assert.equal(helpers.getDeleteManyCallCount("notifications"), 1);
@@ -994,6 +1023,7 @@ describe("server", function() {
         it("responds with status code 200 if user is authenticated", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindResult("groups", true, [testGroup]);
+                helpers.setDeleteManyResult("notifications", true, null);
                 return helpers.getGroups();
             }).then(function(response) {
                 assert.equal(response.statusCode, 200);
@@ -1002,6 +1032,7 @@ describe("server", function() {
         it("responds with a body that is a JSON representation of all groups if user is authenticated", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindResult("groups", true, [testGroup]);
+                helpers.setDeleteManyResult("notifications", true, null);
                 return helpers.getGroups();
             }).then(function(response) {
                 assert.deepEqual(JSON.parse(response.body), [{
@@ -1015,6 +1046,7 @@ describe("server", function() {
         it("responds with status code 500 if database error on find", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindResult("groups", false, {err: "Database failure"});
+                helpers.setDeleteManyResult("notifications", true, null);
                 return helpers.getGroups();
             }).then(function(response) {
                 assert.equal(response.statusCode, 500);
@@ -1110,7 +1142,8 @@ describe("server", function() {
             users: ["bob"]
         };
         function validUpdateQuery() {
-            helpers.setFindOneResult("groups", true, testGroup);
+            helpers.setFindOneResult("groups", true, testGroup, 0);
+            helpers.setFindOneResult("groups", true, null, 1);
             helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
             return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
         }
@@ -1129,7 +1162,7 @@ describe("server", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 return validUpdateQuery();
             }).then(function(response) {
-                assert.equal(helpers.getFindOneCallCount("groups"), 1);
+                assert.isAtLeast(helpers.getFindOneCallCount("groups"), 1);
                 assert.deepEqual(helpers.getFindAnyArgs("groups", 0)[0], {
                     _id: new ObjectID(testGroup._id)
                 });
@@ -1160,7 +1193,8 @@ describe("server", function() {
         it("does not attempt to `set` any of: fields that are undefined, the '_id' field, or the 'users' field",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("groups", true, testGroup);
+                    helpers.setFindOneResult("groups", true, testGroup, 0);
+                    helpers.setFindOneResult("groups", true, null, 1);
                     helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
                     return helpers.updateGroup(testGroup._id, {
                         name: "New Test Group",
@@ -1210,9 +1244,22 @@ describe("server", function() {
                 });
             }
         );
+        it("responds with status code 409 if user is authenticated, group exists, but updated name already in use",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("groups", true, testGroup, 0);
+                    helpers.setFindOneResult("groups", true, testGroup, 1);
+                    helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                    return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 409);
+                });
+            }
+        );
         it("responds with status code 404 if user is authenticated, but group does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                helpers.setFindOneResult("groups", true, null);
+                helpers.setFindOneResult("groups", true, null, 0);
+                helpers.setFindOneResult("groups", true, null, 1);
                 helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
                 return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
             }).then(function(response) {
@@ -1221,7 +1268,8 @@ describe("server", function() {
         });
         it("responds with status code 500 if database error on findOneAndUpdate", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                helpers.setFindOneResult("groups", true, testGroup);
+                helpers.setFindOneResult("groups", true, testGroup, 0);
+                helpers.setFindOneResult("groups", true, null, 1);
                 helpers.setFindOneAndUpdateResult("groups", false, {err: "Database failure"});
                 return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
             }).then(function(response) {
@@ -1230,7 +1278,18 @@ describe("server", function() {
         });
         it("responds with status code 500 if database error on findOne", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                helpers.setFindOneResult("groups", false, {err: "Database failure"});
+                helpers.setFindOneResult("groups", false, {err: "Database failure"}, 0);
+                helpers.setFindOneResult("groups", true, null, 1);
+                helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
+            }).then(function(response) {
+                assert.equal(response.statusCode, 500);
+            });
+        });
+        it("responds with status code 500 if database error on findOne during name validation", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("groups", true, testGroup, 0);
+                helpers.setFindOneResult("groups", false, {err: "Database failure"}, 1);
                 helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
                 return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
             }).then(function(response) {
@@ -1540,7 +1599,9 @@ describe("server", function() {
                 assert.equal(helpers.getFindOneAndUpdateCallCount("groups"), 1);
                 assert.deepEqual(helpers.getFindOneAndUpdateArgs("groups", 0)[1], {
                     $addToSet: {
-                        users: "bob"
+                        users: {
+                            $each: ["bob"]
+                        }
                     }
                 });
             });

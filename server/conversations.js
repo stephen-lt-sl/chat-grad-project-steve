@@ -17,7 +17,7 @@ module.exports = function(app, db, baseUrl) {
         var recipientID = conversationInfo.recipient;
         var senderID = req.session.user;
         // Find both the sender and the recipient in the db
-        dbActions.findAndValidateUsers([senderID, recipientID]).then(function([users]) {
+        dbActions.findAndValidateUsers([senderID, recipientID]).then(function(users) {
             var conversationID = getConversationID(senderID, recipientID);
             var participants = [senderID, recipientID].sort();
             return dbActions.createConversation({

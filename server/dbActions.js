@@ -36,7 +36,7 @@ module.exports = function(db) {
         return notifications.find({
             userID: userID
         }).toArray().catch(function(err) {
-            res.sendStatus(500);
+            return Promise.reject(500);
         });
     }
 
@@ -79,20 +79,20 @@ module.exports = function(db) {
 
     function findUsers() {
         return users.find().toArray().catch(function(err) {
-            res.sendStatus(500);
+            return Promise.reject(500);
         });
     }
 
     function findAndValidateUser(userID) {
         return users.find({
             _id: userID
-        }).limit(1).next().then(function(user) {
+        }).limit(1).next().catch(function(err) {
+            return Promise.reject(500);
+        }).then(function(user) {
             if (!user) {
                 return Promise.reject(404);
             }
             return user;
-        }).catch(function(err) {
-            res.sendStatus(500);
         });
     }
 
@@ -122,8 +122,9 @@ module.exports = function(db) {
     }
 
     function findAndValidateConversation(conversationID, options) {
-        queryObject = {_id: new ObjectID(conversationID)};
-        return conversations.find(query, projection).limit(1).next().catch(function(err) {
+        options = options || {};
+        var queryObject = {_id: conversationID};
+        return conversations.find(queryObject).limit(1).next().catch(function(err) {
             return Promise.reject(500);
         }).then(function(conversation) {
             if (!conversation) {
@@ -147,6 +148,7 @@ module.exports = function(db) {
     }
 
     function findMessages(conversationID, options) {
+        options = options || {};
         var queryObject = {conversationID: conversationID};
         if (options.lastTimestamp) {
             queryObject.timestamp = {$gt: new Date(options.lastTimestamp)};
@@ -171,9 +173,10 @@ module.exports = function(db) {
     }
 
     function findGroups(options) {
+        options = options || {};
         var queryObject = {};
-        if (options.joinedOnly) {
-            queryObject.users = senderID;
+        if (options.isMember) {
+            queryObject.users = options.isMember;
         }
         if (options.searchString) {
             queryObject.$text = {
@@ -186,8 +189,9 @@ module.exports = function(db) {
     }
 
     function findAndValidateGroup(groupID, options) {
-        queryObject = {_id: new ObjectID(groupID)};
-        return groups.find(query, projection).limit(1).next().catch(function(err) {
+        options = options || {};
+        var queryObject = {_id: new ObjectID(groupID)};
+        return groups.find(queryObject).limit(1).next().catch(function(err) {
             return Promise.reject(500);
         }).then(function(group) {
             if (!group) {
@@ -203,34 +207,32 @@ module.exports = function(db) {
     function validateGroupName(name) {
         return groups.find({
             name: name
-        }).limit(1).next().then(function(group) {
+        }).limit(1).next().catch(function(err) {
+            return Promise.reject(500);
+        }).then(function(group) {
             if (group) {
                 return Promise.reject(409);
             }
             return Promise.resolve();
-        }).catch(function(err) {
-            return Promise.reject(409);
         });
     }
 
     function createGroup(group) {
-        return groups.insertOne(group).then(function(resut) {
+        return groups.insertOne(group).then(function(result) {
             return result.ops[0];
         }).catch(function(err) {
             return Promise.reject(500);
         });
     }
 
-    function updateGroupInfo(groupID, updateFields) {
+    function updateGroupInfo(groupID, update, allowedFields) {
         var queryObject = {_id: new ObjectID(groupID)};
         var updateObject = {$set: {}};
-        for (var item in updateFields) {
-            // Don't update any fields that don't exist, the _id field (locked), or the users field
-            // (limited access)
-            if (group[item] && item !== "_id" && item !== "users") {
-                updateObject.$set[item] = updateFields[item];
+        allowedFields.forEach(function(field) {
+            if (update[field]) {
+                updateObject.$set[field] = update[field];
             }
-        }
+        });
         return updateGroup(queryObject, updateObject);
     }
 
@@ -250,7 +252,7 @@ module.exports = function(db) {
         return updateGroup(queryObject, {
             $pull: {
                 users: {
-                    $in: removedUsers
+                    $in: userIDs
                 }
             }
         });
@@ -262,7 +264,7 @@ module.exports = function(db) {
         }).catch(function(err) {
             return Promise.reject(500);
         }).then(function(updateResult) {
-            return dbActions.cleanIdField(updateResult.value);
+            return cleanIdField(updateResult.value);
         });
     }
 
