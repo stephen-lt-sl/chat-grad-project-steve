@@ -56,8 +56,8 @@ module.exports = function(db) {
     }
 
     function findAndValidateConversation(conversationID, options) {
-        queryObject = {_id: new ObjectID(conversationID)};
-        return conversations.find(query, projection).limit(1).next().catch(function(err) {
+        var queryObject = {_id: conversationID};
+        return conversations.find(queryObject).limit(1).next().catch(function(err) {
             return Promise.reject(500);
         }).then(function(conversation) {
             if (!conversation) {
@@ -97,7 +97,11 @@ module.exports = function(db) {
     }
 
     function createMessage(message) {
-        return messages.insertOne(message);
+        return messages.insertOne(message).then(function(result) {
+            return result.ops[0];
+        }).catch(function(err) {
+            return Promise.reject(500);
+        });
     }
 
     function findGroups(options) {
