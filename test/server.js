@@ -927,7 +927,7 @@ describe("server", function() {
                 });
             }
         );
-        it("responds with status code 200 if valid response but database error on find messages", function() {
+        it("responds with status code 200 if valid response but database error on clear notifications", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", true, testConversation);
                 helpers.setFindResult("messages", true, [testMessage, testMessage2]);
