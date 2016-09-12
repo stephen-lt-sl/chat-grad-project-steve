@@ -85,10 +85,10 @@ module.exports = function(port, db, githubAuthoriser) {
         });
     });
 
-    addConversationsAPI(app, db, "/api");
-    addMessagesAPI(app, db, "/api");
-    addNotificationsAPI(app, db, "/api");
-    addGroupsAPI(app, db, "/api");
+    addConversationsAPI(app, dbActions, "/api");
+    addMessagesAPI(app, dbActions, "/api");
+    addNotificationsAPI(app, dbActions, "/api");
+    addGroupsAPI(app, dbActions, "/api");
 
     return app.listen(port);
 };

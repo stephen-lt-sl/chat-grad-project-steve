@@ -1,7 +1,6 @@
 /*global Promise */
 
-module.exports = function(app, db, baseUrl) {
-    var dbActions = require("./dbActions")(db);
+module.exports = function(app, dbActions, baseUrl) {
 
     app.get(baseUrl + "/messages/:id", function(req, res) {
         var senderID = req.session.user;
