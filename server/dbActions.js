@@ -148,7 +148,6 @@ module.exports = function(db) {
     }
 
     function findMessages(conversationID, options) {
-        options = options || {};
         var queryObject = {conversationID: conversationID};
         if (options.lastTimestamp) {
             queryObject.timestamp = {$gt: new Date(options.lastTimestamp)};
@@ -173,7 +172,6 @@ module.exports = function(db) {
     }
 
     function findGroups(options) {
-        options = options || {};
         var queryObject = {};
         if (options.isMember) {
             queryObject.users = options.isMember;
