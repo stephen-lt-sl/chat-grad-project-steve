@@ -10,6 +10,7 @@ module.exports = function(db) {
     var groups = db.collection("groups");
 
     return {
+        getUserNotifications: getUserNotifications,
         addNewMessageNotification: addNewMessageNotification,
         findAndValidateUsers: findAndValidateUsers,
         createConversation: createConversation,
@@ -27,6 +28,14 @@ module.exports = function(db) {
         cleanIdField: cleanIdField,
         clearNotifications: clearNotifications
     };
+
+    function getUserNotifications(userID) {
+        return notifications.find({
+            userID: userID
+        }).toArray().catch(function(err) {
+            return Promise.reject(500);
+        });
+    }
 
     function addNewMessageNotification(conversation, message) {
         var notificationPromises = [];
