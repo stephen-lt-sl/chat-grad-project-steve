@@ -12,6 +12,9 @@ module.exports = function(db) {
     return {
         getUserNotifications: getUserNotifications,
         addNewMessageNotification: addNewMessageNotification,
+        createUser: createUser,
+        findUsers: findUsers,
+        findAndValidateUser: findAndValidateUser,
         findAndValidateUsers: findAndValidateUsers,
         createConversation: createConversation,
         findAndValidateConversation: findAndValidateConversation,
@@ -64,6 +67,33 @@ module.exports = function(db) {
             }));
         });
         return Promise.all(notificationPromises);
+    }
+
+    function createUser(user) {
+        return users.insertOne(user).then(function(result) {
+            return result.ops[0];
+        }).catch(function(err) {
+            return Promise.reject(500);
+        });
+    }
+
+    function findUsers() {
+        return users.find().toArray().catch(function(err) {
+            return Promise.reject(500);
+        });
+    }
+
+    function findAndValidateUser(userID) {
+        return users.find({
+            _id: userID
+        }).limit(1).next().catch(function(err) {
+            return Promise.reject(500);
+        }).then(function(user) {
+            if (!user) {
+                return Promise.reject(404);
+            }
+            return user;
+        });
     }
 
     function findAndValidateUsers(userIDs) {

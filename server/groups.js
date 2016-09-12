@@ -2,8 +2,7 @@
 
 var ObjectID = require("mongodb").ObjectID;
 
-module.exports = function(app, db, baseUrl) {
-    var dbActions = require("./dbActions")(db);
+module.exports = function(app, dbActions, baseUrl) {
 
     app.get(baseUrl + "/groups", function(req, res) {
         var senderID = req.session.user;
@@ -32,8 +31,8 @@ module.exports = function(app, db, baseUrl) {
                 description: groupInfo.description,
                 users: [creatorID]
             });
-        }).then(function(result) {
-            res.json(dbActions.cleanIdField(result));
+        }).then(function(group) {
+            res.json(dbActions.cleanIdField(group));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
