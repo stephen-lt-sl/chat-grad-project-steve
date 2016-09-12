@@ -23,8 +23,8 @@ module.exports = function(db) {
 
     function findGroups(options) {
         var queryObject = {};
-        if (options.joinedOnly) {
-            queryObject.users = senderID;
+        if (options.isMember) {
+            queryObject.users = options.isMember;
         }
         if (options.searchString) {
             queryObject.$text = {
@@ -37,8 +37,9 @@ module.exports = function(db) {
     }
 
     function findAndValidateGroup(groupID, options) {
-        queryObject = {_id: new ObjectID(groupID)};
-        return groups.find(query, projection).limit(1).next().catch(function(err) {
+        options = options || {};
+        var queryObject = {_id: new ObjectID(groupID)};
+        return groups.find(queryObject).limit(1).next().catch(function(err) {
             return Promise.reject(500);
         }).then(function(group) {
             if (!group) {
@@ -54,30 +55,32 @@ module.exports = function(db) {
     function validateGroupName(name) {
         return groups.find({
             name: name
-        }).limit(1).next().then(function(group) {
+        }).limit(1).next().catch(function(err) {
+            return Promise.reject(500);
+        }).then(function(group) {
             if (group) {
                 return Promise.reject(409);
             }
             return Promise.resolve();
-        }).catch(function(err) {
-            return Promise.reject(409);
         });
     }
 
     function createGroup(group) {
-        return groups.insertOne(group);
+        return groups.insertOne(group).then(function(result) {
+            return result.ops[0];
+        }).catch(function(err) {
+            return Promise.reject(500);
+        });
     }
 
-    function updateGroupInfo(groupID, updateFields) {
+    function updateGroupInfo(groupID, update, allowedFields) {
         var queryObject = {_id: new ObjectID(groupID)};
         var updateObject = {$set: {}};
-        for (var item in updateFields) {
-            // Don't update any fields that don't exist, the _id field (locked), or the users field
-            // (limited access)
-            if (group[item] && item !== "_id" && item !== "users") {
-                updateObject.$set[item] = updateFields[item];
+        allowedFields.forEach(function(field) {
+            if (update[field]) {
+                updateObject.$set[field] = update[field];
             }
-        }
+        });
         return updateGroup(queryObject, updateObject);
     }
 
@@ -97,7 +100,7 @@ module.exports = function(db) {
         return updateGroup(queryObject, {
             $pull: {
                 users: {
-                    $in: removedUsers
+                    $in: userIDs
                 }
             }
         });
@@ -109,7 +112,7 @@ module.exports = function(db) {
         }).catch(function(err) {
             return Promise.reject(500);
         }).then(function(updateResult) {
-            return dbActions.cleanIdField(updateResult.value);
+            return cleanIdField(updateResult.value);
         });
     }
 
