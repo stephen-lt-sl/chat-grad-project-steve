@@ -383,14 +383,14 @@ describe("server", function() {
                 });
             }
         );
-        it("responds with status code 500 if user is authenticated and sender does not exist", function() {
+        it("responds with status code 404 if user is authenticated and sender does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("users", true, null, 0);
                 helpers.setFindOneResult("users", true, testUser2, 1);
                 helpers.setInsertOneResult("conversations", true, testConversation);
                 return helpers.postConversation(testUser2._id);
             }).then(function(response) {
-                assert.equal(response.statusCode, 500);
+                assert.equal(response.statusCode, 404);
             });
         });
         it("responds with status code 500 if user is authenticated and database error on find sender", function() {
@@ -403,14 +403,14 @@ describe("server", function() {
                 assert.equal(response.statusCode, 500);
             });
         });
-        it("responds with status code 500 if user is authenticated and recipient does not exist", function() {
+        it("responds with status code 404 if user is authenticated and recipient does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("users", true, testUser, 0);
                 helpers.setFindOneResult("users", true, null, 1);
                 helpers.setInsertOneResult("conversations", true, testConversation);
                 return helpers.postConversation(testUser2._id);
             }).then(function(response) {
-                assert.equal(response.statusCode, 500);
+                assert.equal(response.statusCode, 404);
             });
         });
         it("responds with status code 500 if user is authenticated and database error on find " +
@@ -607,7 +607,7 @@ describe("server", function() {
                 });
             }
         );
-        it("responds with status code 500 if user is authenticated and conversation does not exist", function() {
+        it("responds with status code 404 if user is authenticated and conversation does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", true, null);
                 helpers.setInsertOneResult("messages", true, testMessage);
@@ -615,7 +615,7 @@ describe("server", function() {
                 helpers.setUpdateOneResult("conversations", true, null);
                 return helpers.postMessage(testMessage.conversationID, testMessage.contents);
             }).then(function(response) {
-                assert.equal(response.statusCode, 500);
+                assert.equal(response.statusCode, 404);
             });
         });
         it("responds with status code 500 if user is authenticated and database error on find conversation",
@@ -786,14 +786,14 @@ describe("server", function() {
                 });
             }
         );
-        it("responds with status code 500 if user is authenticated but conversation does not exist", function() {
+        it("responds with status code 404 if user is authenticated but conversation does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", true, null);
                 helpers.setFindResult("messages", true, [testMessage, testMessage2]);
                 helpers.setDeleteManyResult("notifications", true, null);
                 return helpers.getMessages(testConversation._id);
             }).then(function(response) {
-                assert.equal(response.statusCode, 500);
+                assert.equal(response.statusCode, 404);
             });
         });
         it("responds with status code 500 if database error on find conversation", function() {
@@ -904,13 +904,13 @@ describe("server", function() {
                 });
             }
         );
-        it("responds with status code 500 if user is authenticated but conversation does not exist", function() {
+        it("responds with status code 404 if user is authenticated but conversation does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", true, null);
                 helpers.setCountResult("messages", true, 2);
                 return helpers.getMessageCount(testConversation._id);
             }).then(function(response) {
-                assert.equal(response.statusCode, 500);
+                assert.equal(response.statusCode, 404);
             });
         });
         it("responds with status code 500 if database error on find conversation", function() {
