@@ -31,12 +31,20 @@ var devGithubAuthoriser = {
     oAuthUri: "/oauth"
 };
 
+var endpointAPIs = [
+    require("./server/conversations"),
+    require("./server/messages"),
+    require("./server/groups"),
+    require("./server/notifications")
+];
+
 MongoClient.connect(dbUri, function(err, db) {
     if (err) {
         console.log("Failed to connect to db", err);
         return;
     }
+    var dbActions = require("./server/dbActions")(db);
     var githubAuthoriser = devMode ? devGithubAuthoriser : oAuthGithub(oauthClientId, oauthSecret);
-    server(port, db, githubAuthoriser);
+    server(port, dbActions, githubAuthoriser, endpointAPIs);
     console.log("Server running on port " + port);
 });

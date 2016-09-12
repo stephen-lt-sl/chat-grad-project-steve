@@ -19,7 +19,14 @@ var serverInstance;
 module.exports.setupServer = function() {
     setupDB();
     setupAuthentication();
-    serverInstance = server(testPort, db, githubAuthoriser);
+    var endpointAPIs = [
+        require("../server/conversations"),
+        require("../server/messages"),
+        require("../server/groups"),
+        require("../server/notifications")
+    ];
+    var dbActions = require("../server/dbActions")(db);
+    serverInstance = server(testPort, dbActions, githubAuthoriser, endpointAPIs);
 };
 
 module.exports.teardownServer = function() {

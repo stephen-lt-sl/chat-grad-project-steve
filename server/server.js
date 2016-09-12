@@ -5,19 +5,12 @@ var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
 var mongo = require("mongodb");
 
-var addConversationsAPI = require("./conversations");
-var addMessagesAPI = require("./messages");
-var addGroupsAPI = require("./groups");
-var addNotificationsAPI = require("./notifications");
-
-module.exports = function(port, db, githubAuthoriser) {
+module.exports = function(port, dbActions, githubAuthoriser, endpointAPIs) {
     var app = express();
 
     app.use(express.static("public"));
     app.use(cookieParser());
     app.use(bodyParser.json());
-
-    var dbActions = require("./dbActions")(db);
 
     var sessions = {};
 
@@ -85,10 +78,9 @@ module.exports = function(port, db, githubAuthoriser) {
         });
     });
 
-    addConversationsAPI(app, dbActions, "/api");
-    addMessagesAPI(app, dbActions, "/api");
-    addNotificationsAPI(app, dbActions, "/api");
-    addGroupsAPI(app, dbActions, "/api");
+    endpointAPIs.forEach(function(addAPI) {
+        addAPI(app, dbActions, "/api");
+    });
 
     return app.listen(port);
 };
