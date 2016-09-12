@@ -10,6 +10,11 @@ module.exports = function(db) {
     var groups = db.collection("groups");
 
     return {
+        addNewMessageNotification: addNewMessageNotification,
+        findAndValidateConversation: findAndValidateConversation,
+        updateConversationTimestamp: updateConversationTimestamp,
+        findMessages: findMessages,
+        createMessage: createMessage,
         findGroups: findGroups,
         findAndValidateGroup: findAndValidateGroup,
         validateGroupName: validateGroupName,
@@ -20,6 +25,84 @@ module.exports = function(db) {
         cleanIdField: cleanIdField,
         clearNotifications: clearNotifications
     };
+
+    function addNewMessageNotification(conversation, message) {
+        var notificationPromises = [];
+        conversation.participants.forEach(function(participant) {
+            notificationPromises.push(notifications.updateOne({
+                userID: participant,
+                type: "new_messages",
+                "data.conversationID": conversation._id
+            }, {
+                $set: {
+                    userID: participant,
+                    type: "new_messages",
+                    "data.conversationID": conversation._id,
+                    "data.since": message.timestamp,
+                    "data.otherID": conversation.participants.filter(function(otherParticipant) {
+                        return otherParticipant !== participant;
+                    })[0]
+                },
+                $inc: {
+                    "data.messageCount": 1
+                }
+            }, {
+                upsert: true
+            }).catch(function(err) {
+                return Promise.reject(500);
+            }));
+        });
+        return Promise.all(notificationPromises);
+    }
+
+    function findAndValidateConversation(conversationID, options) {
+        var queryObject = {_id: conversationID};
+        return conversations.find(queryObject).limit(1).next().catch(function(err) {
+            return Promise.reject(500);
+        }).then(function(conversation) {
+            if (!conversation) {
+                return Promise.reject(500);
+            }
+            if (options.requiredParticipant && conversation.participants.indexOf(options.requiredParticipant) === -1) {
+                return Promise.reject(403);
+            }
+            return conversation;
+        });
+    }
+
+    function updateConversationTimestamp(conversation, timestamp) {
+        return conversations.updateOne({
+            _id: conversation._id
+        }, {
+            $set: {lastTimestamp: timestamp}
+        }).catch(function(err) {
+            return Promise.reject(500);
+        });
+    }
+
+    function findMessages(conversationID, options) {
+        var queryObject = {conversationID: conversationID};
+        if (options.lastTimestamp) {
+            queryObject.timestamp = {$gt: new Date(options.lastTimestamp)};
+        }
+        if (options.countOnly) {
+            return messages.count(queryObject).catch(function(err) {
+                return Promise.reject(500);
+            });
+        } else {
+            return messages.find(queryObject).toArray().catch(function(err) {
+                return Promise.reject(500);
+            });
+        }
+    }
+
+    function createMessage(message) {
+        return messages.insertOne(message).then(function(result) {
+            return result.ops[0];
+        }).catch(function(err) {
+            return Promise.reject(500);
+        });
+    }
 
     function findGroups(options) {
         var queryObject = {};
