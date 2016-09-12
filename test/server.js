@@ -1110,7 +1110,8 @@ describe("server", function() {
             users: ["bob"]
         };
         function validUpdateQuery() {
-            helpers.setFindOneResult("groups", true, testGroup);
+            helpers.setFindOneResult("groups", true, testGroup, 0);
+            helpers.setFindOneResult("groups", true, null, 1);
             helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
             return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
         }
@@ -1129,7 +1130,7 @@ describe("server", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 return validUpdateQuery();
             }).then(function(response) {
-                assert.equal(helpers.getFindOneCallCount("groups"), 1);
+                assert.isAtLeast(helpers.getFindOneCallCount("groups"), 1);
                 assert.deepEqual(helpers.getFindAnyArgs("groups", 0)[0], {
                     _id: new ObjectID(testGroup._id)
                 });
@@ -1160,7 +1161,8 @@ describe("server", function() {
         it("does not attempt to `set` any of: fields that are undefined, the '_id' field, or the 'users' field",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("groups", true, testGroup);
+                    helpers.setFindOneResult("groups", true, testGroup, 0);
+                    helpers.setFindOneResult("groups", true, null, 1);
                     helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
                     return helpers.updateGroup(testGroup._id, {
                         name: "New Test Group",
@@ -1201,6 +1203,16 @@ describe("server", function() {
                 });
             }
         );
+        it("responds with status code 200 if valid update query that does not require name validation", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("groups", true, testGroup, 0);
+                helpers.setFindOneResult("groups", true, null, 1);
+                helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                return helpers.updateGroup(testGroup._id, {description: "A new test group"});
+            }).then(function(response) {
+                assert.equal(response.statusCode, 200);
+            });
+        });
         it("responds with status code 403 if user is authenticated, group exists, but user is not member of group",
             function() {
                 return helpers.authenticateUser(testGithubUser2, testUser2, testToken).then(function() {
@@ -1212,25 +1224,50 @@ describe("server", function() {
         );
         it("responds with status code 404 if user is authenticated, but group does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                helpers.setFindOneResult("groups", true, null);
+                helpers.setFindOneResult("groups", true, null, 0);
+                helpers.setFindOneResult("groups", true, null, 1);
                 helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
                 return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
             }).then(function(response) {
                 assert.equal(response.statusCode, 404);
             });
         });
+        it("responds with status code 409 if user is authenticated and group exists but updated name is already in " +
+            "use", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("groups", true, testGroup, 0);
+                    helpers.setFindOneResult("groups", true, testGroup, 1);
+                    helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                    return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 409);
+                });
+            }
+        );
         it("responds with status code 500 if database error on findOneAndUpdate", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                helpers.setFindOneResult("groups", true, testGroup);
+                helpers.setFindOneResult("groups", true, testGroup, 0);
+                helpers.setFindOneResult("groups", true, null, 1);
                 helpers.setFindOneAndUpdateResult("groups", false, {err: "Database failure"});
                 return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
             }).then(function(response) {
                 assert.equal(response.statusCode, 500);
             });
         });
-        it("responds with status code 500 if database error on findOne", function() {
+        it("responds with status code 500 if database error on findOne during group validation", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                helpers.setFindOneResult("groups", false, {err: "Database failure"});
+                helpers.setFindOneResult("groups", false, {err: "Database failure"}, 0);
+                helpers.setFindOneResult("groups", true, testGroup, 1);
+                helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
+            }).then(function(response) {
+                assert.equal(response.statusCode, 500);
+            });
+        });
+        it("responds with status code 500 if database error on findOne during name validation", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("groups", true, testGroup, 0);
+                helpers.setFindOneResult("groups", false, {err: "Database failure"}, 1);
                 helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
                 return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
             }).then(function(response) {
@@ -1540,7 +1577,9 @@ describe("server", function() {
                 assert.equal(helpers.getFindOneAndUpdateCallCount("groups"), 1);
                 assert.deepEqual(helpers.getFindOneAndUpdateArgs("groups", 0)[1], {
                     $addToSet: {
-                        users: "bob"
+                        users: {
+                            $each: ["bob"]
+                        }
                     }
                 });
             });
