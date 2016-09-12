@@ -75,12 +75,15 @@ module.exports = function(db) {
     }
 
     function createConversation(conversation) {
-        return conversations.insertOne(conversation).catch(function(err) {
+        return conversations.insertOne(conversation).then(function(result) {
+            return result.ops[0];
+        }).catch(function(err) {
             return Promise.reject(500);
         });
     }
 
     function findAndValidateConversation(conversationID, options) {
+        options = options || {};
         var queryObject = {_id: conversationID};
         return conversations.find(queryObject).limit(1).next().catch(function(err) {
             return Promise.reject(500);

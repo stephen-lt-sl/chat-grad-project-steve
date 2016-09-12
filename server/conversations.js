@@ -17,15 +17,15 @@ module.exports = function(app, db, baseUrl) {
         var recipientID = conversationInfo.recipient;
         var senderID = req.session.user;
         // Find both the sender and the recipient in the db
-        dbActions.findAndValidateUsers([senderID, recipientID]).then(function([users]) {
+        dbActions.findAndValidateUsers([senderID, recipientID]).then(function(users) {
             var conversationID = getConversationID(senderID, recipientID);
             var participants = [senderID, recipientID].sort();
             return dbActions.createConversation({
                 _id: conversationID,
                 participants: participants
             });
-        }).then(function(result) {
-            res.json(dbActions.cleanIdField(result.ops[0]));
+        }).then(function(conversation) {
+            res.json(dbActions.cleanIdField(conversation));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
