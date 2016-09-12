@@ -137,6 +137,32 @@ describe("server", function() {
                 });
             });
         });
+        it("responds with status code 500 if database error on find user", function() {
+            var user = testGithubUser;
+            helpers.setAuthenticationFunction(function(req, authCallback) {
+                authCallback(user, testToken);
+            });
+
+            helpers.setFindOneResult("users", false, {err: "Database failure"});
+            helpers.setInsertOneResult("users", true, testUser);
+
+            return helpers.getOAuth().then(function(response) {
+                assert.equal(response.statusCode, 500);
+            });
+        });
+        it("responds with status code 500 if database error on insert user", function() {
+            var user = testGithubUser;
+            helpers.setAuthenticationFunction(function(req, authCallback) {
+                authCallback(user, testToken);
+            });
+
+            helpers.setFindOneResult("users", true, null);
+            helpers.setInsertOneResult("users", false, {err: "Database failure"});
+
+            return helpers.getOAuth().then(function(response) {
+                assert.equal(response.statusCode, 500);
+            });
+        });
     });
     describe("GET /api/oauth/uri", function() {
         it("responds with status code 200", function() {
@@ -581,6 +607,32 @@ describe("server", function() {
                 });
             }
         );
+        it("responds with status code 200 if message insertion is valid but database error on update " +
+            "new_messages notification", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.setUpdateOneResult("notifications", false, {err: "Database failure"});
+                    helpers.setUpdateOneResult("conversations", true, null);
+                    return helpers.postMessage(testMessage.conversationID, testMessage.contents);
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 200);
+                });
+            }
+        );
+        it("responds with status code 200 if message insertion is valid but database error on update " +
+            "conversation timestamp", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    helpers.setUpdateOneResult("conversations", false, {err: "Database failure"});
+                    return helpers.postMessage(testMessage.conversationID, testMessage.contents);
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 200);
+                });
+            }
+        );
         it("responds with status code 404 if user is authenticated and conversation does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", true, null);
@@ -728,6 +780,16 @@ describe("server", function() {
                 });
             }
         );
+        it("responds with status code 200 if valid response but database error on find messages", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("conversations", true, testConversation);
+                helpers.setFindResult("messages", true, [testMessage, testMessage2]);
+                helpers.setDeleteManyResult("notifications", false, {err: "Database failure"});
+                return helpers.getMessages(testConversation._id);
+            }).then(function(response) {
+                assert.equal(response.statusCode, 200);
+            });
+        });
         it("responds with status code 500 if database error on find messages", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", true, testConversation);
@@ -1235,6 +1297,16 @@ describe("server", function() {
                 });
             }
         );
+        it("responds with status code 200 if valid update query that does not require name validation", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("groups", true, testGroup, 0);
+                helpers.setFindOneResult("groups", true, null, 1);
+                helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                return helpers.updateGroup(testGroup._id, {description: "A new test group"});
+            }).then(function(response) {
+                assert.equal(response.statusCode, 200);
+            });
+        });
         it("responds with status code 403 if user is authenticated, group exists, but user is not member of group",
             function() {
                 return helpers.authenticateUser(testGithubUser2, testUser2, testToken).then(function() {
