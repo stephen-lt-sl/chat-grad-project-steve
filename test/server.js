@@ -659,6 +659,32 @@ describe("server", function() {
                 });
             }
         );
+        it("responds with status code 200 if message insertion is valid but database error on update " +
+            "new_messages notification", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.setUpdateOneResult("notifications", false, {err: "Database failure"});
+                    helpers.setUpdateOneResult("conversations", true, null);
+                    return helpers.postMessage(testMessage.conversationID, testMessage.contents);
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 200);
+                });
+            }
+        );
+        it("responds with status code 200 if message insertion is valid but database error on update " +
+            "conversation timestamp", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("conversations", true, testConversation);
+                    helpers.setInsertOneResult("messages", true, testMessage);
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    helpers.setUpdateOneResult("conversations", false, {err: "Database failure"});
+                    return helpers.postMessage(testMessage.conversationID, testMessage.contents);
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 200);
+                });
+            }
+        );
         it("responds with status code 404 if user is authenticated and conversation does not exist", function() {
             return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                 helpers.setFindOneResult("conversations", true, null);
@@ -1620,6 +1646,16 @@ describe("server", function() {
                 });
             }
         );
+        it("responds with status code 200 if valid update query that does not require name validation", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("groups", true, testGroup, 0);
+                helpers.setFindOneResult("groups", true, null, 1);
+                helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                return helpers.updateGroup(testGroup._id, {description: "A new test group"});
+            }).then(function(response) {
+                assert.equal(response.statusCode, 200);
+            });
+        });
         it("responds with status code 403 if user is authenticated, group exists, but user is not member of group",
             function() {
                 return helpers.authenticateUser(testGithubUser2, testUser2, testToken).then(function() {
