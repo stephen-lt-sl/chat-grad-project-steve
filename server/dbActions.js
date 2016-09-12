@@ -33,7 +33,7 @@ module.exports = function(db) {
         return notifications.find({
             userID: userID
         }).toArray().catch(function(err) {
-            res.sendStatus(500);
+            return Promise.reject(500);
         });
     }
 
