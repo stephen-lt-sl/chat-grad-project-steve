@@ -7,6 +7,7 @@
         return {
             restrict: "E",
             scope: {
+                notificationHandlers: "=",
                 user: "&",
                 users: "&",
             },

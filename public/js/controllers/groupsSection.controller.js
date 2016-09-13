@@ -43,9 +43,27 @@
         activate();
 
         function activate() {
-            chatDataService.getGroups().then(function(groupResponse) {
-                vm.groups = groupResponse.data;
+            $scope.notificationHandlers.group_changed.push(onGroupChanged);
+        }
+
+        function onGroupChanged(notificationData) {
+            var groupSearchIdx = vm.searchResults.findIndex(function(searchResult) {
+                return searchResult.id === notificationData.groupID;
             });
+            if (groupSearchIdx !== -1 || vm.currentGroup.id === notificationData.groupID) {
+                return chatDataService.getGroup(notificationData.groupID).then(function(group) {
+                    var nextGroupSearchIdx = vm.searchResults.findIndex(function(searchResult) {
+                        return searchResult.id === notificationData.groupID;
+                    });
+                    if (nextGroupSearchIdx !== -1) {
+                        vm.searchResults[nextGroupSearchIdx] = group.data;
+                    }
+                    if (vm.currentGroup.id === group.data.id) {
+                        viewGroup(group.data);
+                    }
+                });
+            }
+            return Promise.resolve();
         }
 
         function viewGroup(group) {
