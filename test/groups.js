@@ -560,6 +560,7 @@ describe("groups", function() {
         function validInviteQuery() {
             helpers.setFindOneResult("groups", true, testGroup);
             helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+            helpers.setUpdateOneResult("notifications", true, null);
             return helpers.inviteToGroup(testGroup._id, ["charlie"]);
         }
         it("responds with status code 401 if user not authenticated", function() {
@@ -675,6 +676,7 @@ describe("groups", function() {
         function validRemoveQuery() {
             helpers.setFindOneResult("groups", true, testGroup);
             helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+            helpers.setUpdateOneResult("notifications", true, null);
             return helpers.removeFromGroup(testGroup._id, ["bob"]);
         }
         it("responds with status code 401 if user not authenticated", function() {
@@ -812,6 +814,7 @@ describe("groups", function() {
         function validJoinQuery() {
             helpers.setFindOneResult("groups", true, testGroup2);
             helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+            helpers.setUpdateOneResult("notifications", true, null);
             return helpers.joinGroup(testGroup._id);
         }
         it("responds with status code 401 if user not authenticated", function() {
