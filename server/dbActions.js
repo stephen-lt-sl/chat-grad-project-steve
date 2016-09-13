@@ -262,7 +262,7 @@ module.exports = function(db) {
         }).catch(function(err) {
             return Promise.reject(500);
         }).then(function(updateResult) {
-            return cleanIdField(updateResult.value);
+            return updateResult.value;
         });
     }
 

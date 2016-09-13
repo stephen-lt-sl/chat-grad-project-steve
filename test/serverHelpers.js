@@ -329,6 +329,15 @@ module.exports.getGroups = function(queryParams) {
     }
     return request(requestObject);
 };
+module.exports.getGroup = function(groupID) {
+    var requestUrl = baseUrl + "/api/groups/" + groupID;
+    return request({
+        url: requestUrl,
+        jar: cookieJar,
+        simple: false,
+        resolveWithFullResponse: true
+    });
+};
 module.exports.postGroup = function(name, description) {
     var requestUrl = baseUrl + "/api/groups";
     return request.post({

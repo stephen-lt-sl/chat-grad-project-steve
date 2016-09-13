@@ -22,6 +22,17 @@ module.exports = function(app, dbActions, baseUrl) {
         });
     });
 
+    app.get(baseUrl + "/groups/:id", function(req, res) {
+        var senderID = req.session.user;
+        var groupID = req.params.id;
+        dbActions.findAndValidateGroup(groupID).then(function(group) {
+            dbActions.clearNotifications(senderID, "group_changed", {groupID: groupID});
+            res.json(dbActions.cleanIdField(group));
+        }).catch(function(errorCode) {
+            res.sendStatus(errorCode);
+        });
+    });
+
     app.post(baseUrl + "/groups", function(req, res) {
         var groupInfo = req.body;
         var creatorID = req.session.user;
@@ -49,7 +60,7 @@ module.exports = function(app, dbActions, baseUrl) {
         }).then(function() {
             return dbActions.updateGroupInfo(groupID, groupInfo, ["name", "description"]);
         }).then(function(updatedGroup) {
-            res.json(updatedGroup);
+            res.json(dbActions.cleanIdField(updatedGroup));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
@@ -62,7 +73,7 @@ module.exports = function(app, dbActions, baseUrl) {
         dbActions.findAndValidateGroup(groupID, {requiredMember: userID}).then(function(group) {
             return dbActions.addGroupUsers(groupID, newUsers);
         }).then(function(updatedGroup) {
-            res.json(updatedGroup);
+            res.json(dbActions.cleanIdField(updatedGroup));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
@@ -79,7 +90,7 @@ module.exports = function(app, dbActions, baseUrl) {
             }
             return dbActions.removeGroupUsers(groupID, removedUsers);
         }).then(function(updatedGroup) {
-            res.json(updatedGroup);
+            res.json(dbActions.cleanIdField(updatedGroup));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
@@ -91,7 +102,7 @@ module.exports = function(app, dbActions, baseUrl) {
         dbActions.findAndValidateGroup(groupID).then(function(group) {
             return dbActions.addGroupUsers(groupID, [userID]);
         }).then(function(updatedGroup) {
-            res.json(updatedGroup);
+            res.json(dbActions.cleanIdField(updatedGroup));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
         });
