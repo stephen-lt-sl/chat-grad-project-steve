@@ -12,6 +12,7 @@ module.exports = function(db) {
     return {
         getUserNotifications: getUserNotifications,
         addNewMessageNotification: addNewMessageNotification,
+        addGroupChangedNotification: addGroupChangedNotification,
         createUser: createUser,
         findUsers: findUsers,
         findAndValidateUser: findAndValidateUser,
@@ -59,6 +60,32 @@ module.exports = function(db) {
                 },
                 $inc: {
                     "data.messageCount": 1
+                }
+            }, {
+                upsert: true
+            }).catch(function(err) {
+                return Promise.reject(500);
+            }));
+        });
+        return Promise.all(notificationPromises);
+    }
+
+    function addGroupChangedNotification(group, changingUserID, timestamp) {
+        var notificationPromises = [];
+        group.users.forEach(function(memberID) {
+            if (memberID === changingUserID) {
+                return;
+            }
+            notificationPromises.push(notifications.updateOne({
+                userID: memberID,
+                type: "group_changed",
+                "data.groupID": group._id
+            }, {
+                $set: {
+                    userID: memberID,
+                    type: "group_changed",
+                    "data.groupID": group._id,
+                    "data.since": timestamp
                 }
             }, {
                 upsert: true

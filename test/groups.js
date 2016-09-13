@@ -37,6 +37,12 @@ var testGroup2 = {
     description: "A test group",
     users: ["charlie"]
 };
+var testGroup3 = {
+    _id: "507f1f77bcf86cd799439013",
+    name: "Test Group",
+    description: "A test group",
+    users: ["bob", "charlie"]
+};
 
 describe("groups", function() {
     beforeEach(helpers.setupServer);
@@ -316,6 +322,7 @@ describe("groups", function() {
             helpers.setFindOneResult("groups", true, testGroup, 0);
             helpers.setFindOneResult("groups", true, null, 1);
             helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+            helpers.setUpdateOneResult("notifications", true, null);
             return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
         }
         it("responds with status code 401 if user not authenticated", function() {
@@ -383,6 +390,41 @@ describe("groups", function() {
                 });
             }
         );
+        it("attempts to add a `group_changed` notification for each user in the group other than the user who " +
+            "performed the change", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("groups", true, testGroup3, 0);
+                    helpers.setFindOneResult("groups", true, null, 1);
+                    helpers.setFindOneAndUpdateResult("groups", true, {
+                        _id: "507f1f77bcf86cd799439013",
+                        name: "New Test Group",
+                        description: "A test group",
+                        users: ["bob", "charlie"]
+                    });
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    return helpers.updateGroup(testGroup3._id, {name: "New Test Group"});
+                }).then(function(response) {
+                    assert.equal(helpers.getUpdateOneCallCount("notifications"), 1);
+                    var timestamp = helpers.getUpdateOneArgs("notifications", 0)[1].$set["data.since"];
+                    assert.deepEqual(helpers.getUpdateOneArgs("notifications", 0), [
+                        {
+                            userID: "charlie",
+                            type: "group_changed",
+                            "data.groupID": testGroup3._id,
+                        }, {
+                            $set: {
+                                userID: "charlie",
+                                type: "group_changed",
+                                "data.groupID": testGroup3._id,
+                                "data.since": timestamp,
+                            }
+                        }, {
+                            upsert: true
+                        }
+                    ]);
+                });
+            }
+        );
         it("responds with status code 200 if user is authenticated, group exists, and user is member of group",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
@@ -423,6 +465,24 @@ describe("groups", function() {
                     helpers.setFindOneResult("groups", true, {_id: new ObjectID(testGroup._id)}, 1);
                     helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
                     return helpers.updateGroup(testGroup._id, {name: testGroup.name, description: "A new test group"});
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 200);
+                });
+            }
+        );
+        it("responds with status code 200 if valid update query but database failure on add notifications",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("groups", true, testGroup3, 0);
+                    helpers.setFindOneResult("groups", true, {_id: new ObjectID(testGroup3._id)}, 1);
+                    helpers.setFindOneAndUpdateResult("groups", true, {
+                        _id: "507f1f77bcf86cd799439013",
+                        name: "New Test Group",
+                        description: "A test group",
+                        users: ["bob", "charlie"]
+                    });
+                    helpers.setUpdateOneResult("notifications", false, {err: "Database failure"});
+                    return helpers.updateGroup(testGroup3._id, {name: "New Test Group"});
                 }).then(function(response) {
                     assert.equal(response.statusCode, 200);
                 });

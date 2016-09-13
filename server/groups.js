@@ -60,6 +60,7 @@ module.exports = function(app, dbActions, baseUrl) {
         }).then(function() {
             return dbActions.updateGroupInfo(groupID, groupInfo, ["name", "description"]);
         }).then(function(updatedGroup) {
+            dbActions.addGroupChangedNotification(updatedGroup, userID, new Date());
             res.json(dbActions.cleanIdField(updatedGroup));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
@@ -73,6 +74,7 @@ module.exports = function(app, dbActions, baseUrl) {
         dbActions.findAndValidateGroup(groupID, {requiredMember: userID}).then(function(group) {
             return dbActions.addGroupUsers(groupID, newUsers);
         }).then(function(updatedGroup) {
+            dbActions.addGroupChangedNotification(updatedGroup, userID, new Date());
             res.json(dbActions.cleanIdField(updatedGroup));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
@@ -90,6 +92,7 @@ module.exports = function(app, dbActions, baseUrl) {
             }
             return dbActions.removeGroupUsers(groupID, removedUsers);
         }).then(function(updatedGroup) {
+            dbActions.addGroupChangedNotification(updatedGroup, userID, new Date());
             res.json(dbActions.cleanIdField(updatedGroup));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
@@ -102,6 +105,7 @@ module.exports = function(app, dbActions, baseUrl) {
         dbActions.findAndValidateGroup(groupID).then(function(group) {
             return dbActions.addGroupUsers(groupID, [userID]);
         }).then(function(updatedGroup) {
+            dbActions.addGroupChangedNotification(updatedGroup, userID, new Date());
             res.json(dbActions.cleanIdField(updatedGroup));
         }).catch(function(errorCode) {
             res.sendStatus(errorCode);
