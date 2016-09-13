@@ -87,8 +87,6 @@
         function joinGroup(groupID) {
             return chatDataService.joinGroup(groupID)
                 .then(function(updateResponse) {
-                    console.log("Joined");
-                    console.log(updateResponse);
                     viewGroup(updateResponse.data);
                 })
                 .catch(function(errorResponse) {
@@ -113,8 +111,6 @@
         function leaveGroup(groupID) {
             return chatDataService.removeUserFromGroup(groupID, $scope.user()._id)
                 .then(function(updateResponse) {
-                    console.log("Left");
-                    console.log(updateResponse);
                     viewGroup(updateResponse.data);
                 })
                 .catch(function(errorResponse) {
@@ -130,8 +126,6 @@
                 chatDataService.updateGroupInfo(vm.currentGroup.id, vm.editName, vm.editDescription);
             return savePromise
                 .then(function(updateResponse) {
-                    console.log("Updated");
-                    console.log(updateResponse);
                     viewGroup(updateResponse.data);
                 })
                 .catch(function(errorResponse) {
@@ -160,8 +154,6 @@
             if (recipient) {
                 return chatDataService.inviteUserToGroup(vm.currentGroup.id, recipient.data.id)
                     .then(function(updateResponse) {
-                        console.log("Invited");
-                        console.log(updateResponse);
                         viewGroup(updateResponse.data);
                     })
                     .catch(function(errorResponse) {
