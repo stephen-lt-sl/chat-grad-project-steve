@@ -202,13 +202,13 @@ module.exports = function(db) {
         });
     }
 
-    function validateGroupName(name) {
+    function validateGroupName(name, groupID) {
         return groups.find({
             name: name
         }).limit(1).next().catch(function(err) {
             return Promise.reject(500);
         }).then(function(group) {
-            if (group) {
+            if (group && group._id.toHexString() !== groupID) {
                 return Promise.reject(409);
             }
             return Promise.resolve();

@@ -32,7 +32,7 @@ var testGroup = {
     users: ["bob"]
 };
 var testGroup2 = {
-    _id: "507f1f77bcf86cd799439011",
+    _id: "507f1f77bcf86cd799439012",
     name: "Test Group",
     description: "A test group",
     users: ["charlie"]
@@ -207,7 +207,7 @@ describe("groups", function() {
         it("responds with status code 409 if user is authenticated but group with given name already exists",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("groups", true, testGroup);
+                    helpers.setFindOneResult("groups", true, {_id: new ObjectID(testGroup2._id)});
                     helpers.setInsertOneResult("groups", true, testGroup);
                     return helpers.postGroup(testGroup.name, testGroup.description);
                 }).then(function(response) {
@@ -336,24 +336,24 @@ describe("groups", function() {
                 assert.equal(response.statusCode, 200);
             });
         });
+        it("responds with status code 200 if valid update query that sets the name field to its original value",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("groups", true, testGroup, 0);
+                    helpers.setFindOneResult("groups", true, {_id: new ObjectID(testGroup._id)}, 1);
+                    helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                    return helpers.updateGroup(testGroup._id, {name: testGroup.name, description: "A new test group"});
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 200);
+                });
+            }
+        );
         it("responds with status code 403 if user is authenticated, group exists, but user is not member of group",
             function() {
                 return helpers.authenticateUser(testGithubUser2, testUser2, testToken).then(function() {
                     return validUpdateQuery();
                 }).then(function(response) {
                     assert.equal(response.statusCode, 403);
-                });
-            }
-        );
-        it("responds with status code 409 if user is authenticated, group exists, but updated name already in use",
-            function() {
-                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("groups", true, testGroup, 0);
-                    helpers.setFindOneResult("groups", true, testGroup, 1);
-                    helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
-                    return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
-                }).then(function(response) {
-                    assert.equal(response.statusCode, 409);
                 });
             }
         );
@@ -371,7 +371,7 @@ describe("groups", function() {
             "use", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("groups", true, testGroup, 0);
-                    helpers.setFindOneResult("groups", true, testGroup, 1);
+                    helpers.setFindOneResult("groups", true, {_id: new ObjectID(testGroup2._id)}, 1);
                     helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
                     return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
                 }).then(function(response) {

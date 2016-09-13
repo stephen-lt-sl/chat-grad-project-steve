@@ -9,7 +9,7 @@ module.exports = function(app, dbActions, baseUrl) {
         var joinedOnly = req.query.joinedOnly;
         var searchString = req.query.searchString;
         dbActions.findGroups({
-            isMember: joinedOnly ? senderID : undefined,
+            isMember: joinedOnly === "true" ? senderID : undefined,
             searchString: searchString
         }).then(function(docs) {
             var groupIDs = docs.map(function(group) {
@@ -44,7 +44,7 @@ module.exports = function(app, dbActions, baseUrl) {
         var groupInfo = req.body;
         dbActions.findAndValidateGroup(groupID, {requiredMember: userID}).then(function(group) {
             if (groupInfo.name) {
-                return dbActions.validateGroupName(groupInfo.name);
+                return dbActions.validateGroupName(groupInfo.name, groupID);
             }
         }).then(function() {
             return dbActions.updateGroupInfo(groupID, groupInfo, ["name", "description"]);
