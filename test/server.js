@@ -1,6 +1,4 @@
 /*global Promise*/
-var server = require("../server/server");
-var request = require("request-promise-native");
 var assert = require("chai").assert;
 var helpers = require("./serverHelpers");
 
