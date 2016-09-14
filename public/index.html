@@ -44,6 +44,7 @@
                         ng-show="chatVm.currentActionsSection === 'conversations'">
                     </chat-conversations-section>
                     <chat-groups-section
+                        notification-handlers="chatVm.notificationHandlers"
                         user="chatVm.user"
                         users="chatVm.users"
                         ng-show="chatVm.currentActionsSection === 'groups'">

@@ -32,10 +32,16 @@ var testGroup = {
     users: ["bob"]
 };
 var testGroup2 = {
-    _id: "507f1f77bcf86cd799439011",
+    _id: "507f1f77bcf86cd799439012",
     name: "Test Group",
     description: "A test group",
     users: ["charlie"]
+};
+var testGroup3 = {
+    _id: "507f1f77bcf86cd799439013",
+    name: "Test Group",
+    description: "A test group",
+    users: ["bob", "charlie"]
 };
 
 describe("groups", function() {
@@ -144,6 +150,86 @@ describe("groups", function() {
             });
         });
     });
+    describe("GET /api/groups/:id", function() {
+        function validQuery() {
+            helpers.setFindOneResult("groups", true, testGroup);
+            helpers.setDeleteManyResult("notifications", true, null);
+            return helpers.getGroup(testGroup._id);
+        }
+        it("responds with status code 401 if user not authenticated", function() {
+            return helpers.getGroup(testGroup._id).then(function(response) {
+                assert.equal(response.statusCode, 401);
+            });
+        });
+        it("responds with status code 401 if user has an unrecognised session token", function() {
+            helpers.setSessionToken(testExpiredToken);
+            return helpers.getGroup(testGroup._id).then(function(response) {
+                assert.equal(response.statusCode, 401);
+            });
+        });
+        it("attempts to find the group with the given ID if user is authenticated",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    return validQuery();
+                }).then(function(response) {
+                    assert.equal(helpers.getFindOneCallCount("groups"), 1);
+                    assert.deepEqual(helpers.getFindAnyArgs("groups", 0)[0], {_id: new ObjectID(testGroup._id)});
+                });
+            }
+        );
+        it("attempts to the user's 'group_changed' notification for the group found", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    return validQuery();
+                }).then(function(response) {
+                    assert.equal(helpers.getDeleteManyCallCount("notifications"), 1);
+                    assert.deepEqual(helpers.getDeleteManyArgs("notifications", 0)[0], {
+                        userID: testUser._id,
+                        type: "group_changed",
+                        "data.groupID": testGroup._id
+                    });
+                });
+            }
+        );
+        it("responds with status code 200 if user is authenticated", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                return validQuery();
+            }).then(function(response) {
+                assert.equal(response.statusCode, 200);
+            });
+        });
+        it("responds with a body that is a JSON representation of the group found if user is authenticated",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    return validQuery();
+                }).then(function(response) {
+                    assert.deepEqual(JSON.parse(response.body), {
+                        id: testGroup._id,
+                        name: testGroup.name,
+                        description: testGroup.description,
+                        users: testGroup.users
+                    });
+                });
+            }
+        );
+        it("responds with status code 200 if valid query but database error on delete notifications", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("groups", true, testGroup);
+                helpers.setDeleteManyResult("notifications", false, {err: "Database failure"});
+                return helpers.getGroup(testGroup._id);
+            }).then(function(response) {
+                assert.equal(response.statusCode, 200);
+            });
+        });
+        it("responds with status code 500 if database error on find", function() {
+            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                helpers.setFindOneResult("groups", false, {err: "Database failure"});
+                helpers.setDeleteManyResult("notifications", true, null);
+                return helpers.getGroup(testGroup._id);
+            }).then(function(response) {
+                assert.equal(response.statusCode, 500);
+            });
+        });
+    });
     describe("POST /api/groups/", function() {
         it("responds with status code 401 if user not authenticated", function() {
             return helpers.postGroup(testGroup.name, testGroup.description).then(function(response) {
@@ -207,7 +293,7 @@ describe("groups", function() {
         it("responds with status code 409 if user is authenticated but group with given name already exists",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("groups", true, testGroup);
+                    helpers.setFindOneResult("groups", true, {_id: new ObjectID(testGroup2._id)});
                     helpers.setInsertOneResult("groups", true, testGroup);
                     return helpers.postGroup(testGroup.name, testGroup.description);
                 }).then(function(response) {
@@ -236,6 +322,7 @@ describe("groups", function() {
             helpers.setFindOneResult("groups", true, testGroup, 0);
             helpers.setFindOneResult("groups", true, null, 1);
             helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+            helpers.setUpdateOneResult("notifications", true, null);
             return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
         }
         it("responds with status code 401 if user not authenticated", function() {
@@ -303,6 +390,41 @@ describe("groups", function() {
                 });
             }
         );
+        it("attempts to add a `group_changed` notification for each user in the group other than the user who " +
+            "performed the change", function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("groups", true, testGroup3, 0);
+                    helpers.setFindOneResult("groups", true, null, 1);
+                    helpers.setFindOneAndUpdateResult("groups", true, {
+                        _id: "507f1f77bcf86cd799439013",
+                        name: "New Test Group",
+                        description: "A test group",
+                        users: ["bob", "charlie"]
+                    });
+                    helpers.setUpdateOneResult("notifications", true, null);
+                    return helpers.updateGroup(testGroup3._id, {name: "New Test Group"});
+                }).then(function(response) {
+                    assert.equal(helpers.getUpdateOneCallCount("notifications"), 1);
+                    var timestamp = helpers.getUpdateOneArgs("notifications", 0)[1].$set["data.since"];
+                    assert.deepEqual(helpers.getUpdateOneArgs("notifications", 0), [
+                        {
+                            userID: "charlie",
+                            type: "group_changed",
+                            "data.groupID": testGroup3._id,
+                        }, {
+                            $set: {
+                                userID: "charlie",
+                                type: "group_changed",
+                                "data.groupID": testGroup3._id,
+                                "data.since": timestamp,
+                            }
+                        }, {
+                            upsert: true
+                        }
+                    ]);
+                });
+            }
+        );
         it("responds with status code 200 if user is authenticated, group exists, and user is member of group",
             function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
@@ -336,24 +458,42 @@ describe("groups", function() {
                 assert.equal(response.statusCode, 200);
             });
         });
+        it("responds with status code 200 if valid update query that sets the name field to its original value",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("groups", true, testGroup, 0);
+                    helpers.setFindOneResult("groups", true, {_id: new ObjectID(testGroup._id)}, 1);
+                    helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+                    return helpers.updateGroup(testGroup._id, {name: testGroup.name, description: "A new test group"});
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 200);
+                });
+            }
+        );
+        it("responds with status code 200 if valid update query but database failure on add notifications",
+            function() {
+                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
+                    helpers.setFindOneResult("groups", true, testGroup3, 0);
+                    helpers.setFindOneResult("groups", true, {_id: new ObjectID(testGroup3._id)}, 1);
+                    helpers.setFindOneAndUpdateResult("groups", true, {
+                        _id: "507f1f77bcf86cd799439013",
+                        name: "New Test Group",
+                        description: "A test group",
+                        users: ["bob", "charlie"]
+                    });
+                    helpers.setUpdateOneResult("notifications", false, {err: "Database failure"});
+                    return helpers.updateGroup(testGroup3._id, {name: "New Test Group"});
+                }).then(function(response) {
+                    assert.equal(response.statusCode, 200);
+                });
+            }
+        );
         it("responds with status code 403 if user is authenticated, group exists, but user is not member of group",
             function() {
                 return helpers.authenticateUser(testGithubUser2, testUser2, testToken).then(function() {
                     return validUpdateQuery();
                 }).then(function(response) {
                     assert.equal(response.statusCode, 403);
-                });
-            }
-        );
-        it("responds with status code 409 if user is authenticated, group exists, but updated name already in use",
-            function() {
-                return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                    helpers.setFindOneResult("groups", true, testGroup, 0);
-                    helpers.setFindOneResult("groups", true, testGroup, 1);
-                    helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
-                    return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
-                }).then(function(response) {
-                    assert.equal(response.statusCode, 409);
                 });
             }
         );
@@ -371,7 +511,7 @@ describe("groups", function() {
             "use", function() {
                 return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
                     helpers.setFindOneResult("groups", true, testGroup, 0);
-                    helpers.setFindOneResult("groups", true, testGroup, 1);
+                    helpers.setFindOneResult("groups", true, {_id: new ObjectID(testGroup2._id)}, 1);
                     helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
                     return helpers.updateGroup(testGroup._id, {name: "New Test Group"});
                 }).then(function(response) {
@@ -420,6 +560,7 @@ describe("groups", function() {
         function validInviteQuery() {
             helpers.setFindOneResult("groups", true, testGroup);
             helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+            helpers.setUpdateOneResult("notifications", true, null);
             return helpers.inviteToGroup(testGroup._id, ["charlie"]);
         }
         it("responds with status code 401 if user not authenticated", function() {
@@ -488,16 +629,6 @@ describe("groups", function() {
                 });
             }
         );
-        it("responds with status code 200 if valid update query that does not require name validation", function() {
-            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                helpers.setFindOneResult("groups", true, testGroup, 0);
-                helpers.setFindOneResult("groups", true, null, 1);
-                helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
-                return helpers.updateGroup(testGroup._id, {description: "A new test group"});
-            }).then(function(response) {
-                assert.equal(response.statusCode, 200);
-            });
-        });
         it("responds with status code 403 if user is authenticated, group exists, but user is not member of group",
             function() {
                 return helpers.authenticateUser(testGithubUser2, testUser2, testToken).then(function() {
@@ -545,6 +676,7 @@ describe("groups", function() {
         function validRemoveQuery() {
             helpers.setFindOneResult("groups", true, testGroup);
             helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+            helpers.setUpdateOneResult("notifications", true, null);
             return helpers.removeFromGroup(testGroup._id, ["bob"]);
         }
         it("responds with status code 401 if user not authenticated", function() {
@@ -613,16 +745,6 @@ describe("groups", function() {
                 });
             }
         );
-        it("responds with status code 200 if valid update query that does not require name validation", function() {
-            return helpers.authenticateUser(testGithubUser, testUser, testToken).then(function() {
-                helpers.setFindOneResult("groups", true, testGroup, 0);
-                helpers.setFindOneResult("groups", true, null, 1);
-                helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
-                return helpers.updateGroup(testGroup._id, {description: "A new test group"});
-            }).then(function(response) {
-                assert.equal(response.statusCode, 200);
-            });
-        });
         it("responds with status code 403 if user is authenticated, group exists, but user is not member of group",
             function() {
                 return helpers.authenticateUser(testGithubUser2, testUser2, testToken).then(function() {
@@ -692,6 +814,7 @@ describe("groups", function() {
         function validJoinQuery() {
             helpers.setFindOneResult("groups", true, testGroup2);
             helpers.setFindOneAndUpdateResult("groups", true, updatedTestGroup);
+            helpers.setUpdateOneResult("notifications", true, null);
             return helpers.joinGroup(testGroup._id);
         }
         it("responds with status code 401 if user not authenticated", function() {

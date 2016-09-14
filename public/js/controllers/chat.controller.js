@@ -23,7 +23,8 @@
         vm.conversationControls = {};
         // Set of function listeners for handling different notification types
         vm.notificationHandlers = {
-            "new_messages": []
+            "new_messages": [],
+            "group_changed": [],
         };
 
         vm.setMessagesUnread = setMessagesUnread;

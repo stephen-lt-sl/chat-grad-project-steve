@@ -19,6 +19,7 @@
             submitMessage: submitMessage,
             getNotifications: getNotifications,
             getGroups: getGroups,
+            getGroup: getGroup,
             createGroup: createGroup,
             updateGroupInfo: updateGroupInfo,
             inviteUserToGroup: inviteUserToGroup,
@@ -96,6 +97,10 @@
                 queryParams.searchString = searchString;
             }
             return $http.get("/api/groups/", {params: queryParams});
+        }
+
+        function getGroup(groupID) {
+            return $http.get("/api/groups/" + groupID);
         }
 
         function createGroup(name, description) {

@@ -1,5 +1,6 @@
 <div class="groupsSection">
-    <div class="groupSearch">
+    <div class="groupAccess">
+        <button ng-disabled="vm.creatingNewGroup" ng-click="vm.startCreateGroup()">Create new group</button>
         <h3>Search for groups</h3>
         <form id="group-search-form" class="groupSearchForm" ng-submit="vm.searchForGroups()">
             <input id="group-search-form-input" ng-model="vm.searchString" placeholder="Search for..." class="groupSearchFormInput">
@@ -15,7 +16,18 @@
     </div>
     <div class="verticalDivider"></div>
     <div class="groupDetailsSection">
-        <div class="groupDetails" ng-if="vm.currentGroup">
+        <div class="newGroupForm" ng-if="vm.creatingNewGroup">
+            <fieldset class="groupEditInfo">
+                <p>Group name: <input type="text" ng-model="vm.editName"/></p>
+                <p>Group description:<br/>
+                <textarea ng-model="vm.editDescription" class="groupEditDescription"></textarea></p>
+            </fieldset>
+            <div class="groupEditOptions">
+                <button ng-disabled="vm.savingEdits" ng-click="vm.saveEditGroup()">{{vm.savingEdits ? "Creating..." : "Create"}}</button>
+                <button ng-click="vm.cancelEditGroup()">Cancel</button>
+            </div>
+        </div>
+        <div class="groupDetails" ng-if="vm.currentGroup && !vm.creatingNewGroup">
             <div ng-show="!vm.editing">
                 <div class="groupInfo">
                     <h1>{{vm.currentGroup.name}}</h1>
@@ -42,7 +54,7 @@
                     <button ng-click="vm.cancelEditGroup()">Cancel</button>
                 </div>
             </div>
-            <div class="groupMembers">
+            <div ng-hide="vm.creatingNewGroup" class="groupMembers">
                 <h3>Group members</h3>
                 <ul>
                     <!-- This item only visible if user is a member of the group -->
